@@ -190,9 +190,7 @@ onUnmounted(() => {
                     <slot name="header"></slot>
                 </h1>
                 <div class="flex items-center space-x-4">
-                    <input type="text" placeholder="Search..."
-                        class="hidden sm:block px-4 py-2 text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg" />
-                    <Link :href="route('profile.edit')"
+                   <Link :href="route('profile.edit')"
                         class="flex items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200">
                     <img src="/images/4.jpg" class="w-8 h-8 rounded-full" alt="User Profile" />
                     <span class="ml-2 text-gray-800 dark:text-gray-200 font-semibold text-sm md:text-base">

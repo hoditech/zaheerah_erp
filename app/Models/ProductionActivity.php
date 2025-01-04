@@ -16,10 +16,7 @@ class ProductionActivity extends Model
         'logged_at',
     ];
 
-    public function batch()
-    {
-        return $this->belongsTo(ProductionBatch::class, 'batch_id');
-    }
+   
 
     public function employee()
     {

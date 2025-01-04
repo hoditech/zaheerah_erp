@@ -14,6 +14,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
     <!-- Montserrat Font -->
 
+    <link rel="icon" href="{{ asset('images/logo.png') }}" type="image/png">
+
+
 
     <!-- Scripts -->
     @routes

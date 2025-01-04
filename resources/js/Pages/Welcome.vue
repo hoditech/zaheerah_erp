@@ -37,7 +37,9 @@ const socialLinks = [
                     <div class="text-center px-6   p-8 rounded-lg">
                         <!-- Added background and padding -->
                         <!-- User Icon -->
-                        <i class="fas fa-user-circle text-green-600 text-8xl mb-4"></i>
+                        <div class="flex justify-center items-center py-8">
+                            <img src="/images/logo.png" height="100" width="100" alt="Logo">
+                        </div>
                         <h1 class="text-5xl font-bold text-green-600 mb-2">Welcome to the Employee Portal</h1>
                         <p class="text-lg text-gray-700 mb-4 max-w-lg mx-auto">Your gateway to success and
                             collaboration.</p>
