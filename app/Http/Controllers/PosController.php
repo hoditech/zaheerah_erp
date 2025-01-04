@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Product;
+use App\Models\Sale;
+use App\Models\SaleItem;
+use Barryvdh\DomPDF\Facade\Pdf;
+use DB;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Barryvdh\Debugbar\Facades\Debugbar;
+
+use function Termwind\render;
+
+class PosController extends Controller
+{
+    public function index(){
+        $products = Product::with('category')->get();
+
+       // dd($products);
+        return Inertia::render("POS/Index", [
+            'products'=> $products,
+        ]);
+    }
+
+
+    public function makeSale(Request $request)
+{
+    $validated = $request->validate([
+        'items' => 'required|array',
+        'items.*.product_id' => 'required|exists:products,id',
+        'items.*.quantity' => 'required|integer|min:1',
+        'items.*.price' => 'required|numeric|min:0',
+        'total_amount' => 'required|numeric|min:0',
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        // Create the sale record
+        $sale = Sale::create(['total_amount' => $validated['total_amount']]);
+
+        foreach ($validated['items'] as $item) {
+            // Fetch the product
+            $product = Product::find($item['product_id']);
+
+            // Check if enough stock is available
+            if ($product->stock < $item['quantity']) {
+                throw new \Exception("Insufficient stock for product ID {$item['product_id']}");
+            }
+
+            // Deduct stock
+            $product->decrement('stock', $item['quantity']);
+
+            // Create the sale item record
+            SaleItem::create([
+                'sale_id' => $sale->id,
+                'product_id' => $item['product_id'],
+                'quantity' => $item['quantity'],
+                'price' => $item['price'],
+            ]);
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Sale completed successfully',
+            'sale_id' => $sale->id,
+        ], 200);
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'message' => 'An error occurred while processing the sale',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
+
+public function generateReceipt(Request $request)
+{
+    $data = $request->all();
+
+    $receiptData = [
+        'logo' => asset('images/your-logo.png'), // Update with your actual logo path
+        'businessName' => 'Your Business Name',
+        'businessAddress' => '123 Business St, Lagos, Nigeria',
+        'items' => $data['items'], // Array of items with name, price, quantity
+        'total' => $data['total_amount'],
+    ];
+
+    Debugbar::info('Click');
+
+
+    $pdf = PDF::loadView('receipt', $receiptData);
+
+    return $pdf->stream('receipt.pdf'); 
+}
+
+}
