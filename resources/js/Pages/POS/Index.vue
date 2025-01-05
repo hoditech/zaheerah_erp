@@ -21,10 +21,18 @@ interface CartItem extends Product {
     quantity: number;
 }
 
+interface ReceiptItem {
+    product_id: number;
+    name: string,
+    quantity: number;
+    price: number;
+}
+
 // Accept props from backend
 const props = defineProps<{
     products: Product[];
 }>();
+
 
 const cartItems = ref<CartItem[]>([]);
 const selectedCategory = ref("All");
@@ -32,7 +40,7 @@ const searchQuery = ref("");
 const receiptTotal = ref(0);
 
 const showReceipt = ref(false);
-const receiptItems = ref([]);
+const receiptItems =  ref<ReceiptItem[]>([]);
 
 // Create category filter options dynamically
 const categories = ["All", ...new Set(props.products.map(product => product.category.name))];
@@ -85,6 +93,7 @@ const checkout = async () => {
         total_amount: calculateTotal(),
         items: cartItems.value.map(item => ({
             product_id: item.id,
+            name: item.name,
             quantity: item.quantity,
             price: item.price,
         })),
@@ -134,6 +143,8 @@ const generateReceipt = async () => {
         console.error('Error generating receipt:', error);
     }
 };
+
+
 </script>
 
 <template>
@@ -213,7 +224,7 @@ const generateReceipt = async () => {
                                     <span>₦{{ calculateTotal() }}</span>
                                 </div>
                                 <button @click="checkout"  class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-md transition">Checkout</button>
-                                <button @click="cartItems.value = []" class="w-full py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold rounded-lg shadow-md transition dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200">
+                                <button @click="cartItems = []" class="w-full py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold rounded-lg shadow-md transition dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200">
                                     Clear Cart
                                 </button>
                             </div>

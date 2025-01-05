@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
-use Barryvdh\Debugbar\Facades\Debugbar;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,7 +13,7 @@ class productController extends Controller
     {
         $products = Product::with('category')->get();
         //dd($products);
-        Debugbar::info($products);
+       // Debugbar::info($products);
 
         return Inertia::render('product/ProductPage', props: [
             'products' => $products,

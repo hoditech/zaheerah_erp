@@ -4,14 +4,54 @@ import { Head } from '@inertiajs/vue3';
 import StatisticCard from '@/Components/StatisticCard.vue';
 import ActivityPanel from '@/Components/ActivityPanel.vue';
 
+
+interface Category {
+    id: number;
+    name: string;
+    revenue: string,
+    cost: string,
+    profit: string,
+    inventory: string
+}
+
+interface User {
+    id: number,
+    name: string,
+    email: string,
+    phone: string
+    role: string,
+    status: string,
+}
+
+interface ActivityItem {
+    description: string;
+    time: string;
+}
+
 defineProps({
-    totalRevenue: String,
-    totalProfit: String,
-    totalStock: Number,
-    totalCost: Number,
-    categories: Array,
-    recentActivities: Array,
-    users: Array,
+    totalRevenue: {
+        type: String,
+        default: '0'
+        
+    },
+    totalProfit: {
+        type: String,
+        default: '0'
+    },
+    totalStock: {
+        type: String,
+        default: '0'
+    },
+    totalCost: {
+        type: String,
+        default: '0'
+    },
+    categories: Array as () => Category[],
+    recentActivities: {
+        type: Array as () => ActivityItem[],
+        default: [],
+    },
+    users: Array as () => User[],
 });
 </script>
 

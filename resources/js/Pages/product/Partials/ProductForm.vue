@@ -5,10 +5,14 @@ import InputError from '@/Components/InputError.vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 
+interface Category {
+    id: number;
+    name: string;
+}
 
 defineProps({
     categories: {
-        type: Array,
+        type: Array as () => Category[],
         required: true,
     },
 });
@@ -32,8 +36,8 @@ const submit = () => {
 </script>
 
 <template>
-    <div v-if="$page.props.flash.message" class="bg-green-100 text-green-700 px-4 py-2 rounded mb-4">
-            {{ $page.props.flash.message }}
+    <div v-if="$page.props.flash.success" class="bg-green-100 text-green-700 px-4 py-2 rounded mb-4">
+            {{ $page.props.flash.success }}
         </div>
     <form @submit.prevent="submit" class="space-y-6">
         <div>

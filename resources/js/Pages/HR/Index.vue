@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { PropType, ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 
-defineProps({
-  employees: Array, // Employees data passed as a prop
+
+const props = defineProps({
+  employees: {
+    type: Array  as PropType<any[]>,
+      required: false,
+      default: () => [],
+  }
 });
+
+
+
+
 
 const columns = [
   { label: "Name", key: "name" },
@@ -25,7 +34,7 @@ const deleteEmployee = (employee: any) => {
         console.log(`${employee.name} has been deleted successfully.`);
       },
     });
-    employees.value = employees.value.filter((e) => e.id !== employee.id);
+    employee.value = employee.value.filter((e: { id: any; }) => e.id !== employee.id);
   }
 };
 

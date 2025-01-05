@@ -90,7 +90,7 @@ class DashboardController extends Controller
             'totalRevenue' => '₦' . number_format($totalRevenue, 2),
             'totalProfit' => '₦' . number_format($totalProfit, 2),
             'totalCost' => '₦' . number_format($totalCost, 2),
-            'totalStock' => $totalStock,
+            'totalStock' => number_format($totalStock),
             'categories' => $categories,
             'recentActivities' => $recentActivities,
             'users' => $users,

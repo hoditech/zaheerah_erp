@@ -3,9 +3,14 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ProductForm from './Partials/ProductForm.vue';
 import { Head } from '@inertiajs/vue3';
 
+interface Category {
+    id: number;
+    name: string;
+}
+
 defineProps({
     categories: {
-        type: Array,
+        type: Array as () => Category[],
         required: true,
     },
 });

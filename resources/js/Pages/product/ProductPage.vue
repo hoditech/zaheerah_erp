@@ -45,7 +45,7 @@ const exportToCSV = () => {
             const keys = col.key.split(".");
             let value = product;
             for (const key of keys) {
-                value = value[key];
+                value = [key];
                 if (value === undefined) break;
             }
             return `"${value ?? ''}"`;
