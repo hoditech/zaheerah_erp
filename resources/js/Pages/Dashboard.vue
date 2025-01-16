@@ -3,6 +3,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import StatisticCard from '@/Components/StatisticCard.vue';
 import ActivityPanel from '@/Components/ActivityPanel.vue';
+// @ts-ignore
+import { is, can } from 'laravel-permission-to-vuejs'
 
 
 interface Category {
@@ -67,7 +69,7 @@ defineProps({
 
         <main class="min-h-screen bg-gray-100 dark:bg-gray-900">
             <section class="container mx-auto max-w-7xl space-y-12">
-                <div class="grid grid-cols-1 gap-6 md:grid-cols-4">
+                <div v-if="is('Technical Manager')" class="grid grid-cols-1 gap-6 md:grid-cols-4">
                     <StatisticCard title="Total Revenue" :value="totalRevenue" color="yellow" subtitle="Monthly Revenue" />
                     <StatisticCard title="Total Cost" :value="totalProfit" color="red" subtitle="Monthly Costs" />
                     <StatisticCard title="Profit" :value="totalCost" color="green" subtitle="Monthly Profit" />

@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Employee;
 use App\Models\Category;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Spatie\Permission\Models\Role;
 
 class EmployeeController extends Controller
 {
@@ -14,7 +15,7 @@ class EmployeeController extends Controller
      */
     public function index()
     {
-        $employees = Employee::with('category')->get();
+        $employees = User::with('category')->get();
 
         return Inertia::render('HR/Index', [
             'employees' => $employees,
@@ -28,9 +29,13 @@ class EmployeeController extends Controller
     public function create()
     {
         $categories = Category::all();
+        $roles = Role::all();
+
 
         return Inertia::render('HR/Create', [
             'categories' => $categories,
+            'roles' => $roles,
+
         ]);
     }
 
@@ -41,13 +46,21 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:employees,email',
+            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'phone' => 'nullable|string|max:15',
-            'role' => 'required|string|max:50',
+            'can_login' => 'required|boolean',
             'category_id' => 'required|exists:categories,id',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
-        Employee::create($validated);
+        $validated['password'] = bcrypt($validated['password']);
+
+       
+        $role = Role::findByName('Manager');
+
+
+        $user = User::create($validated);
+        $user->assignRole($role);
 
         return redirect()->route('employees.index')
             ->with('success', 'Employee added successfully.');
@@ -56,29 +69,34 @@ class EmployeeController extends Controller
     /**
      * Show the form for editing the specified employee.
      */
-    public function edit(Employee $employee)
+    public function edit(User $employee)
     {
-        
+
         $categories = Category::all();
+        $roles = Role::all();
 
         return Inertia::render('HR/Edit', [
             'employee' => $employee,
             'categories' => $categories,
+            'roles' => $roles,
         ]);
     }
 
     /**
      * Update the specified employee in storage.
      */
-    public function update(Request $request, Employee $employee)
+    public function update(Request $request, User $employee)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:employees,email,' . $employee->id,
             'phone' => 'nullable|string|max:15',
-            'role' => 'required|string|max:50',
+            'can_login' => 'required|boolean',
             'category_id' => 'required|exists:categories,id',
+            'password' => 'required|string|min:8|confirmed',
+
         ]);
+
+        $validated['password'] = bcrypt($validated['password']);
 
         $employee->update($validated);
 
@@ -89,10 +107,10 @@ class EmployeeController extends Controller
     /**
      * Remove the specified employee from storage.
      */
-    public function destroy(Employee $employee)
+    public function destroy(User $employee)
     {
         $employee->delete();
 
-        return back()->with( 'success', 'Employee deleted successfully.');
+        return back()->with('success', 'Employee deleted successfully.');
     }
 }

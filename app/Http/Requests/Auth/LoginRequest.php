@@ -41,6 +41,18 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
+        // Retrieve the user by email
+        $user = \App\Models\User::where('email', $this->input('email'))->first();
+
+         // Check if the user exists and can log in
+         if (!$user || !$user->can_login) {
+            throw ValidationException::withMessages([
+                'email' => $user
+                    ? trans('auth.failed')
+                    : trans('auth.failed'),    
+            ]);
+        }
+
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 

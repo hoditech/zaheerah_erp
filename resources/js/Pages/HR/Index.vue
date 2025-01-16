@@ -3,6 +3,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { PropType, ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
+// @ts-ignore
+import { is, can } from 'laravel-permission-to-vuejs'
 
 
 const props = defineProps({
@@ -15,7 +17,11 @@ const props = defineProps({
 
 
 
-
+interface Action {
+  label: string;
+  onClick: (employee: any) => void;
+  class: string;
+}
 
 const columns = [
   { label: "Name", key: "name" },
@@ -43,18 +49,21 @@ const editEmployee = (employee: any) => {
   router.visit(route('employees.edit', employee.id));
 };
 
-const actions = [
-  {
-    label: "Edit",
-    onClick: editEmployee,
-    class: "text-blue-600 hover:text-blue-900",
-  },
-  {
-    label: "Delete",
-    onClick: deleteEmployee,
-    class: "text-red-600 hover:text-red-900",
-  },
-];
+let actions: Action[] = [];
+if (is('Technical Manager')) {
+  actions = [
+    {
+      label: "Edit",
+      onClick: editEmployee,
+      class: "text-blue-600 hover:text-blue-900",
+    },
+    {
+      label: "Delete",
+      onClick: deleteEmployee,
+      class: "text-red-600 hover:text-red-900",
+    },
+  ];
+}
 </script>
 
 <template>
@@ -79,7 +88,7 @@ const actions = [
               class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
             />
           </div>
-          <button
+          <button v-if="is('Technical Manager | HR')"
             @click="$inertia.visit(route('employees.create'))"
             class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out"
           >

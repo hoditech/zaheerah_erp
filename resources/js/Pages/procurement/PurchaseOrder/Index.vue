@@ -3,6 +3,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { PropType, ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
+// @ts-ignore
+import { is } from 'laravel-permission-to-vuejs'
 
 defineProps({
     purchaseOrders: {
@@ -11,6 +13,13 @@ defineProps({
     default: () => [],
   },
 });
+
+interface Action {
+  label: string;
+  onClick: (employee: any) => void;
+  class: string;
+}
+
 
 
 const columns = [
@@ -35,7 +44,9 @@ const editpurchaseOder = (order: any) => {
   router.visit(route('purchase-orders.edit', order.id));
 };
 
-const actions = [
+let actions: Action[] = [];
+if (is('Technical Manager')) {
+ actions = [
   {
     label: "Edit",
     onClick: editpurchaseOder,
@@ -46,7 +57,7 @@ const actions = [
     onClick: deleteOrder,
     class: "text-red-600 hover:text-red-900",
   },
-];
+];}
 </script>
 
 <template>
@@ -70,11 +81,11 @@ const actions = [
               class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
             />
           </div>
-          <button
+          <button 
             @click="$inertia.visit(route('purchase-orders.create'))"
             class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out"
           >
-            Add New Supply
+            Add New
           </button>
         </div>
 

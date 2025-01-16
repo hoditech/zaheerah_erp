@@ -3,6 +3,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { PropType, ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
+// @ts-ignore
+import { is } from 'laravel-permission-to-vuejs'
 
 // Explicitly type the batches prop as an array
 defineProps({
@@ -12,6 +14,15 @@ defineProps({
     default: () => [], 
   },
 });
+
+
+interface Action {
+  label: string;
+  onClick: (employee: any) => void;
+  class: string;
+}
+
+
 
 
 const columns = [
@@ -34,8 +45,9 @@ const deleteBatch = (batch: any) => {
 const editBatch = (batch: any) => {
   router.visit(route('productions.edit', batch.id));
 };
-
-const actions = [
+let actions: Action[] = [];
+if (is('Technical Manager')) {
+ actions = [
   {
     label: "Edit",
     onClick: editBatch,
@@ -46,7 +58,7 @@ const actions = [
     onClick: deleteBatch,
     class: "text-red-600 hover:text-red-900",
   },
-];
+];}
 </script>
 
 <template>

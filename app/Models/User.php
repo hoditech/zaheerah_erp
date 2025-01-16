@@ -6,13 +6,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use LaravelAndVueJS\Traits\LaravelPermissionToVueJS;
 use Spatie\Permission\Traits\HasRoles;
 
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasRoles,  LaravelPermissionToVueJS;
 
     /**
      * The attributes that are mass assignable.
@@ -22,6 +23,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
+        'category_id',
+        'can_login',
         'password',
     ];
 
@@ -49,8 +53,8 @@ class User extends Authenticatable
     }
 
      // A user belongs to one store
-     public function store()
+     public function category()
      {
-         return $this->belongsTo(Store::class);
+         return $this->belongsTo(Category::class);
      }
 }

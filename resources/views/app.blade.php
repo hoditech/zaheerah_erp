@@ -16,6 +16,13 @@
 
     <link rel="icon" href="{{ asset('images/logo.png') }}" type="image/png">
 
+    <script type="text/javascript">
+        window.Laravel = {
+            csrfToken: "{{ csrf_token() }}",
+            jsPermissions: {!! auth()->user()?->jsPermissions() !!}
+        }
+    </script>
+
 
 
     <!-- Scripts -->

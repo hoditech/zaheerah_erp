@@ -8,9 +8,18 @@ interface Category {
   name: string;
 }
 
+interface Role {
+  id: number;
+  name: string;
+}
+
 defineProps({
     categories: {
         type: Array as () => Category[],
+        required: true,
+    },
+    roles: {
+        type: Array as () => Role[],
         required: true,
     },
 });
@@ -19,8 +28,11 @@ const form = reactive({
     name: '',
     email: '',
     phone: '',
-    role: '',
+    can_login: false,
+    role_name: '',
     category_id: '',
+    password: '',
+    password_confirmation: '',
 });
 
 const submitForm = () => {
@@ -42,6 +54,7 @@ const submitForm = () => {
       <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
         <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8 dark:bg-gray-800">
           <form @submit.prevent="submitForm">
+            <!-- Name -->
             <div class="mb-6">
               <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
               <input
@@ -52,6 +65,8 @@ const submitForm = () => {
                 required
               />
             </div>
+
+            <!-- Email -->
             <div class="mb-6">
               <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
               <input
@@ -62,6 +77,8 @@ const submitForm = () => {
                 required
               />
             </div>
+
+            <!-- Phone -->
             <div class="mb-6">
               <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
               <input
@@ -71,16 +88,8 @@ const submitForm = () => {
                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-indigo-500 dark:focus:border-indigo-500"
               />
             </div>
-            <div class="mb-6">
-              <label for="role" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
-              <input
-                v-model="form.role"
-                type="text"
-                id="role"
-                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-indigo-500 dark:focus:border-indigo-500"
-                required
-              />
-            </div>
+
+            <!-- Category -->
             <div class="mb-6">
               <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
               <select
@@ -94,6 +103,47 @@ const submitForm = () => {
                 </option>
               </select>
             </div>
+
+            <!-- Role -->
+            <div class="mb-6">
+              <label for="role" class="block text-sm font-medium text-gray-700 dark:text-gray-300">User Role</label>
+              <select
+                v-model="form.role_name"
+                id="role"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-indigo-500 dark:focus:border-indigo-500"
+                required
+              >
+                <option v-for="role in roles" :key="role.id" :value="role.id">
+                  {{ role.name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Password -->
+            <div class="mb-6">
+              <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+              <input
+                v-model="form.password"
+                type="password"
+                id="password"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-indigo-500 dark:focus:border-indigo-500"
+                required
+              />
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="mb-6">
+              <label for="password_confirmation" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm Password</label>
+              <input
+                v-model="form.password_confirmation"
+                type="password"
+                id="password_confirmation"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-indigo-500 dark:focus:border-indigo-500"
+                required
+              />
+            </div>
+
+            <!-- Buttons -->
             <div class="flex space-x-4">
               <button
                 type="submit"

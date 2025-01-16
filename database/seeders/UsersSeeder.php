@@ -15,7 +15,8 @@ class UsersSeeder extends Seeder
     {
        // Creating an initial admin user
        $admin = User::firstOrCreate([
-        'email' => 'admin@example.com'
+        'email' => 'admin@example.com',
+       ' category_id' => 1
     ], [
         'name' => 'Admin User',
         'password' => bcrypt('password') 

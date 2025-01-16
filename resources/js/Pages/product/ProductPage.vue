@@ -3,6 +3,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
+// @ts-ignore
+import { is } from 'laravel-permission-to-vuejs'
+
 
 const props = defineProps({
     products: {
@@ -10,6 +13,13 @@ const props = defineProps({
         default: () => [],
     },
 });
+
+interface Action {
+  label: string;
+  onClick: (employee: any) => void;
+  class: string;
+}
+
 
 const columns = [
     { label: "ID", key: "id" },
@@ -27,7 +37,8 @@ const deleteProduct = (product: any) => {
 
 
 
-
+let actions: Action[] = [];
+if (is('Technical Manager')) {
 const actions = [
     { label: "Delete", onClick: deleteProduct, class: "text-red-600 hover:text-red-900" },
     {
@@ -35,7 +46,7 @@ const actions = [
         onClick: (product: any) => console.log("Edit", product),
         class: "text-blue-600 hover:text-blue-900",
     },
-];
+];}
 
 // Function to export products as CSV
 const exportToCSV = () => {

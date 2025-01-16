@@ -5,11 +5,15 @@ import Dropdown from '@/Components/Dropdown.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link } from '@inertiajs/vue3';
+// @ts-ignore
+import { is } from 'laravel-permission-to-vuejs'
 
 const showingNavigationDropdown = ref(false);
 
 const sidebarOpen = ref(true); // Open by default on desktop
 const isMobile = ref(window.innerWidth < 768);
+
+
 
 const toggleSidebar = () => {
     sidebarOpen.value = !sidebarOpen.value;
@@ -25,6 +29,8 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('resize', updateIsMobile);
 });
+
+
 </script>
 
 <template>
@@ -72,7 +78,9 @@ onUnmounted(() => {
                         </Link>
                     </li>
 
-                    <li :class="{
+                    <!-- eslint-disable-next-line -->
+                    <li v-if="is('Manager | Employee | Technical Manager')"
+                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -88,7 +96,7 @@ onUnmounted(() => {
                         </Link>
                     </li>
 
-                    <li
+                    <li  v-if="is('HR | Super Admin | Admin | Technical Manager')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -100,7 +108,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">HR</span>
                         </Link>
                     </li>
-                    <li
+                    <li v-if="is('Manager | Employee | Technical Manager | Super Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -112,7 +120,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Inventory</span>
                         </Link>
                     </li>
-                    <li
+                    <li v-if="is('Manager | Employee | Technical Manager | Super Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -124,7 +132,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Production</span>
                         </Link>
                     </li>
-                    <li
+                    <li v-if="is('Technical Manager | Super Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -136,7 +144,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Suppliers</span>
                         </Link>
                     </li>
-                    <li
+                    <li v-if="is('Employee | Technical Manager | Super Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -148,7 +156,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Purchase Order</span>
                         </Link>
                     </li>
-                    <li
+                    <li v-if="is('Technical Manager | Super Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
