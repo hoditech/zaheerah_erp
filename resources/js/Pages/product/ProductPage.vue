@@ -4,7 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 // @ts-ignore
-import { is } from 'laravel-permission-to-vuejs'
+import { can } from 'laravel-permission-to-vuejs'
 
 
 const props = defineProps({
@@ -27,6 +27,13 @@ const columns = [
     { label: "Category", key: "category.name" },
     { label: "Price", key: "price" },
     { label: "Stock", key: "stock" },
+    { label: "Weight", key: "weight" },
+    { label: "Weight per Bag", key: "weight_per_bag" },
+    { label: "Total Cost", key: "total_cost" },
+    { label: "Remaining Bags", key: "remaining_bags" },
+    { label: "Supplier", key: "supplier.name" },  // Assuming the supplier relationship is loaded
+    { label: "Expiration Date", key: "exp_date" },
+    { label: "Batch Number", key: "batch_number" },
 ];
 
 const searchQuery = ref("");
@@ -38,8 +45,8 @@ const deleteProduct = (product: any) => {
 
 
 let actions: Action[] = [];
-if (is('Technical Manager')) {
-const actions = [
+if (can('manage_inventory')) {
+ actions = [
     { label: "Delete", onClick: deleteProduct, class: "text-red-600 hover:text-red-900" },
     {
         label: "Edit",

@@ -4,7 +4,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { PropType, ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 // @ts-ignore
-import { is } from 'laravel-permission-to-vuejs'
+import { can } from 'laravel-permission-to-vuejs'
 
 defineProps({
     purchaseOrders: {
@@ -45,7 +45,7 @@ const editpurchaseOder = (order: any) => {
 };
 
 let actions: Action[] = [];
-if (is('Technical Manager')) {
+if (can('manage_suppliers')) {
  actions = [
   {
     label: "Edit",

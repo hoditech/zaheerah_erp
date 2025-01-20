@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -26,6 +27,7 @@ class productController extends Controller
     public function create()
     {
         $categories = Category::all();
+        $suppliers = Supplier::all();
         return Inertia::render('product/Create',[
             'categories' => $categories
         ]);
@@ -38,8 +40,20 @@ class productController extends Controller
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
+            'weight' => 'nullable|numeric|min:0',
+            'weight_per_bag' => 'nullable|numeric|min:0',
+            'total_cost' => 'nullable|numeric|min:0',
+            'stock_receive' => 'nullable|integer|min:0',
+            'stock_release' => 'nullable|integer|min:0',
+            'remaining_bags' => 'nullable|integer|min:0',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'exp_date' => 'nullable|date',
+            'batch_number' => 'nullable|string|max:255',
+            'storage_location' => 'nullable|string|max:255',
             'category_id' => 'required|exists:categories,id',
         ]);
+
+        //dd($validated);
     
         try {
             Product::create($validated);

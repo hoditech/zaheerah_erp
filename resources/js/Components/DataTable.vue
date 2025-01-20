@@ -58,7 +58,7 @@ watch(
   <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
     <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
       <thead>
-        <tr class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold uppercase tracking-wide">
+        <tr class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold uppercase tracking-wide">
           <th v-for="column in columns" :key="column.key" class="px-6 py-4 border-b text-left">
             {{ column.label }}
           </th>
@@ -89,7 +89,7 @@ watch(
     </table>
 
     <div class="mt-4 flex items-center justify-between px-6 py-4 bg-gray-100 dark:bg-gray-700 border-t">
-      <div class="text-sm">
+      <div class="text-xs">
         Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ Math.min(currentPage * pageSize, totalItems) }} of {{ totalItems }} results
       </div>
       <div class="flex items-center space-x-1">

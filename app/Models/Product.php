@@ -11,6 +11,16 @@ class Product extends Model
         'price',
         'stock',
         'category_id',
+        'weight',
+        'weight_per_bag',
+        'total_cost',
+        'stock_receive',
+        'stock_release',
+        'remaining_bags',
+        'supplier_id',
+        'exp_date',
+        'batch_number',
+        'storage_location',
     ];
 
     public function category()
@@ -33,5 +43,10 @@ class Product extends Model
     public function sales()
     {
         return $this->hasManyThrough(Sale::class, SaleItem::class, 'product_id', 'id', 'id', 'sale_id');
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
     }
 }

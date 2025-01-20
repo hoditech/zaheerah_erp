@@ -4,7 +4,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { PropType, ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 // @ts-ignore
-import { is } from 'laravel-permission-to-vuejs'
+import { can } from 'laravel-permission-to-vuejs'
 
 defineProps({
   supplies: {
@@ -45,7 +45,7 @@ const editSupply = (supply: any) => {
 };
 
 let actions: Action[] = [];
-if (is('Technical Manager')) {
+if (can('manage_suppliers')) {
  actions = [
   {
     label: "Edit",
@@ -82,7 +82,7 @@ if (is('Technical Manager')) {
               class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
             />
           </div>
-          <button v-if="is('Technical Manager | HR')"
+          <button v-if="can('manage_suppliers')"
             @click="$inertia.visit(route('suppliers.create'))"
             class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out"
           >

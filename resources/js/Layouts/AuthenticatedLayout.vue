@@ -79,7 +79,7 @@ onUnmounted(() => {
                     </li>
 
                     <!-- eslint-disable-next-line -->
-                    <li v-if="is('Manager | Employee | Technical Manager')"
+                    <li v-if="is('Manager | Employee | Super Admin')"
                      :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -96,7 +96,7 @@ onUnmounted(() => {
                         </Link>
                     </li>
 
-                    <li  v-if="is('HR | Super Admin | Admin | Technical Manager')"
+                    <li  v-if="is('HR | Super Admin | Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -108,7 +108,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">HR</span>
                         </Link>
                     </li>
-                    <li v-if="is('Manager | Employee | Technical Manager | Super Admin')"
+                    <li v-if="is('Manager | Employee | Super Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -120,7 +120,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Inventory</span>
                         </Link>
                     </li>
-                    <li v-if="is('Manager | Employee | Technical Manager | Super Admin')"
+                    <li v-if="is('Manager | Employee | Super Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -144,7 +144,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Suppliers</span>
                         </Link>
                     </li>
-                    <li v-if="is('Employee | Technical Manager | Super Admin')"
+                    <li v-if="is('Manager | Employee | Super Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -156,7 +156,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Purchase Order</span>
                         </Link>
                     </li>
-                    <li v-if="is('Technical Manager | Super Admin')"
+                    <!-- <li v-if="is('Technical Manager | Super Admin')"
                     :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
@@ -164,10 +164,10 @@ onUnmounted(() => {
                         'active-link': route().current('users')
                     }">
                         <Link :href="route('users')" class="flex items-center space-x-2">
-                        <span>👤</span> <!-- Users Icon -->
+                        <span>👤</span>  Users Icon
                         <span v-if="sidebarOpen || isMobile">Users</span>
                         </Link>
-                    </li>
+                    </li> -->
 
 
                 </ul>
@@ -200,7 +200,7 @@ onUnmounted(() => {
                 <div class="flex items-center space-x-4">
                    <Link :href="route('profile.edit')"
                         class="flex items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200">
-                    <img src="/images/4.jpg" class="w-8 h-8 rounded-full" alt="User Profile" />
+                    <img src="/images/avata.png" class="w-8 h-8 rounded-full" alt="User Profile" />
                     <span class="ml-2 text-gray-800 dark:text-gray-200 font-semibold text-sm md:text-base">
                         {{ $page.props.auth.user.name }}
                     </span>

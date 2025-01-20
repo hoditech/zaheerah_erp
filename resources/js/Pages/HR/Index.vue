@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { PropType, ref } from 'vue';
+import { computed, PropType, ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 // @ts-ignore
 import { is, can } from 'laravel-permission-to-vuejs'
@@ -23,13 +23,21 @@ interface Action {
   class: string;
 }
 
+
+const formattedEmployees = props.employees.map((employee) => ({
+  ...employee,
+  roles: employee.roles.map((role: { name: string }) => role.name).join(', '),
+}));
+
 const columns = [
   { label: "Name", key: "name" },
   { label: "Email", key: "email" },
   { label: "Phone", key: "phone" },
-  { label: "Role", key: "role" },
+  { label: "Roles", key: "roles" },
   { label: "Category", key: "category.name" },
 ];
+
+
 
 const searchQuery = ref("");
 
@@ -50,7 +58,7 @@ const editEmployee = (employee: any) => {
 };
 
 let actions: Action[] = [];
-if (is('Technical Manager')) {
+if (is('Super Admin')) {
   actions = [
     {
       label: "Edit",
@@ -88,7 +96,7 @@ if (is('Technical Manager')) {
               class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
             />
           </div>
-          <button v-if="is('Technical Manager | HR')"
+          <button v-if="is('Super Admin | HR')"
             @click="$inertia.visit(route('employees.create'))"
             class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out"
           >
@@ -99,7 +107,7 @@ if (is('Technical Manager')) {
         <!-- DataTable Component -->
         <DataTable
           :columns="columns"
-          :data="employees"
+          :data="formattedEmployees"
           :searchQuery="searchQuery"
           :actions="actions"
           :pageSize="5"

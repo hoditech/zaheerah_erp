@@ -3,78 +3,111 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 
 class RolesSeeder extends Seeder
 {
-    public function run(): void
+    public function run()
     {
-        // Define roles
+        // Define global permissions
+        $globalPermissions = [
+            // User and role management
+            'manage_users',
+            'view_users',
+            'manage_roles',
+            'view_roles',
+            'manage_permissions',
+            'view_permissions',
+
+            // Sales and transactions
+            'create_sales',
+            'view_sales',
+            'refund_sales',
+            'generate_sales_reports',
+
+            // Product and inventory management
+            'create_products',
+            'edit_products',
+            'delete_products',
+            'view_products',
+            'manage_inventory',
+
+            // Supplier and purchase order management
+            'manage_suppliers',
+            'create_purchase_orders',
+            'view_purchase_orders',
+            'update_purchase_orders',
+            'delete_purchase_orders',
+
+            // Production management
+            'manage_productions',
+            'create_productions',
+            'view_productions',
+            'update_productions',
+            'delete_productions',
+
+            // Dashboard and analytics
+            'view_dashboard',
+            'generate_reports',
+        ];
+
+        // Create global permissions
+        foreach ($globalPermissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
+        }
+
+        // Create roles
         $roles = [
-            'Technical Manager',
             'Super Admin',
             'Admin',
-            'HR',
             'Manager',
+            'HR',
             'Employee',
         ];
 
-        // Create or fetch roles
-        $roleInstances = [];
-        foreach ($roles as $roleName) {
-            $roleInstances[$roleName] = Role::firstOrCreate(['name' => $roleName]);
+        foreach ($roles as $role) {
+            Role::firstOrCreate(['name' => $role]);
         }
 
-        $technicalManager = $roleInstances['Technical Manager'];
-        $superAdmin = $roleInstances['Super Admin'];
-        $manager = $roleInstances['Manager'];
-        $employee = $roleInstances['Employee'];
+        // Assign global permissions to roles
+        $user = User::find(1);
+        $superAdmin = Role::findByName('Super Admin');
 
-        // Define global permissions
-        $globalPermissions = [
-            'manage_all_categories',
-            'view_all_categories',
-            'manage_sales',
-            'view_sales',
-        ];
+        $user->assignRole($superAdmin);
 
-        // Create global permissions and assign to roles
-        foreach ($globalPermissions as $permissionName) {
-            $permission = Permission::firstOrCreate(['name' => $permissionName]);
-        }
-        $technicalManager->givePermissionTo($globalPermissions);
-        $superAdmin->givePermissionTo(['view_all_categories', 'view_sales']);
+        // Assign all permissions to Super Admin
+        $user->givePermissionTo($globalPermissions);
 
-        // Define actions for categories
-        $actions = ['view', 'edit', 'delete', 'update'];
+        // Assign selected permissions to other roles
+        //$admin->givePermissionTo(['manage_users', 'view_users', 'manage_roles', 'view_roles']);
+        //$manager->givePermissionTo(['view_sales', 'create_sales', 'view_productions', 'create_productions', 'update_productions']);
+        //$hr->givePermissionTo(['view_users', 'manage_users']);
+        //$employee->givePermissionTo(['view_productions', 'view_sales']);
 
-        // Fetch categories
-        $categories = Category::all();
-        if ($categories->isEmpty()) {
-            $this->command->warn('No categories found. Skipping category-specific permissions.');
-            return;
-        }
+        // Define category-specific permissions
+        $categories = ['water', 'soap', 'electronics', 'furniture'];
+        $actions = ['view', 'create', 'edit', 'delete'];
 
-        // Dynamically create category-specific permissions
         foreach ($categories as $category) {
             foreach ($actions as $action) {
-                $permissionName = "{$action}_category_{$category->id}";
+                $permissionName = "{$action}_category_{$category}";
                 $permission = Permission::firstOrCreate(['name' => $permissionName]);
 
                 // Assign permissions to roles
-                if (in_array($action, ['view', 'edit', 'update'])) {
-                    $manager->givePermissionTo($permission);
-                }
+                // if (in_array($action, ['view', 'edit'])) {
+                //     $manager->givePermissionTo($permission);
+                // }
 
-                if ($action === 'view') {
-                    $employee->givePermissionTo($permission);
-                }
+                // if ($action === 'view') {
+                //     $employee->givePermissionTo($permission);
+                // }
             }
         }
 
-        // Grant all permissions to the Technical Manager
-        $technicalManager->givePermissionTo(Permission::all());
+        echo "Permissions and roles seeded successfully.";
     }
+
 }

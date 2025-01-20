@@ -69,7 +69,7 @@ defineProps({
 
         <main class="min-h-screen bg-gray-100 dark:bg-gray-900">
             <section class="container mx-auto max-w-7xl space-y-12">
-                <div v-if="is('Technical Manager')" class="grid grid-cols-1 gap-6 md:grid-cols-4">
+                <div v-if="is('Super Admin | Admin')" class="grid grid-cols-1 gap-6 md:grid-cols-4">
                     <StatisticCard title="Total Revenue" :value="totalRevenue" color="yellow" subtitle="Monthly Revenue" />
                     <StatisticCard title="Total Cost" :value="totalProfit" color="red" subtitle="Monthly Costs" />
                     <StatisticCard title="Profit" :value="totalCost" color="green" subtitle="Monthly Profit" />
