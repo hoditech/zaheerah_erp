@@ -31,6 +31,9 @@ onUnmounted(() => {
 });
 
 
+
+
+
 </script>
 
 <template>
@@ -79,8 +82,7 @@ onUnmounted(() => {
                     </li>
 
                     <!-- eslint-disable-next-line -->
-                    <li v-if="is('Manager | Employee | Super Admin')"
-                     :class="{
+                    <li v-if="is('Manager | Employee | Super Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -96,8 +98,7 @@ onUnmounted(() => {
                         </Link>
                     </li>
 
-                    <li  v-if="is('HR | Super Admin | Admin')"
-                    :class="{
+                    <li v-if="is('HR | Super Admin | Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -108,8 +109,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">HR</span>
                         </Link>
                     </li>
-                    <li v-if="is('Manager | Employee | Super Admin')"
-                    :class="{
+                    <li v-if="is('Manager | Employee | Super Admin|Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -120,8 +120,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Inventory</span>
                         </Link>
                     </li>
-                    <li v-if="is('Manager | Employee | Super Admin')"
-                    :class="{
+                    <li v-if="is('Manager | Employee | Super Admin|Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -132,8 +131,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Production</span>
                         </Link>
                     </li>
-                    <li v-if="is('Technical Manager | Super Admin')"
-                    :class="{
+                    <li v-if="is('Technical Manager | Super Admin|Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -144,8 +142,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Suppliers</span>
                         </Link>
                     </li>
-                    <li v-if="is('Manager | Employee | Super Admin')"
-                    :class="{
+                    <li v-if="is('Manager | Employee | Super Admin|Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -175,13 +172,13 @@ onUnmounted(() => {
 
             <!-- Logout Button with Icon-Only in Collapsed Mode -->
             <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                <Link :href="route('logout')"
+                <Link :href="route('logout')" method="post" as="button"
                     class="w-full py-2 text-sm font-semibold text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 rounded-lg flex items-center justify-center">
                 <span>🔓</span> <!-- Logout Icon -->
-                <span></span>
                 <span v-if="sidebarOpen || isMobile">Log Out</span> <!-- Text shown only when expanded -->
                 </Link>
             </div>
+
         </aside>
 
         <!-- Overlay for Mobile Sidebar -->
@@ -198,7 +195,7 @@ onUnmounted(() => {
                     <slot name="header"></slot>
                 </h1>
                 <div class="flex items-center space-x-4">
-                   <Link :href="route('profile.edit')"
+                    <Link :href="route('profile.edit')"
                         class="flex items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200">
                     <img src="/images/avata.png" class="w-8 h-8 rounded-full" alt="User Profile" />
                     <span class="ml-2 text-gray-800 dark:text-gray-200 font-semibold text-sm md:text-base">

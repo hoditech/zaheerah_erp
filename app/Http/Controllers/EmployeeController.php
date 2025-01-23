@@ -80,7 +80,7 @@ class EmployeeController extends Controller
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'category_id' => $validated['category_id'],
-            'password' => bcrypt($validated['password']),
+            'password' => $validated['password'],
             'can_login' => $validated['can_login']
         ]);
 
