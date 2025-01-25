@@ -50,7 +50,7 @@ const submitForm = () => {
 
 <template>
 
-    <Head title="Edit Supply" />
+    <Head title="Edit Order" />
 
     <AuthenticatedLayout>
         <template #header>

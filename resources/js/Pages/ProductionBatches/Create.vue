@@ -3,14 +3,14 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 
-interface Category {
+interface Product {
     id: number;
     name: string;
 }
 
 defineProps({
-    categories: {
-        type: Array as () => Category[],
+    products: {
+        type: Array as () => Product[],
         required: true,
     },
 });
@@ -57,7 +57,7 @@ const submitForm = () => {
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-green-500 dark:focus:border-green-500"
                                         required>
                                         <option value="" disabled>Select a Product</option>
-                                        <option v-for="category in categories" :key="category.id" :value="category.id">
+                                        <option v-for="category in products" :key="category.id" :value="category.id">
                                             {{ category.name }}
                                         </option>
                                     </select>

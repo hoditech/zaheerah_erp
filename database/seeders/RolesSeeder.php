@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
@@ -73,21 +72,36 @@ class RolesSeeder extends Seeder
         }
 
         // Assign global permissions to roles
-        $user = User::find(1);
         $superAdmin = Role::findByName('Super Admin');
+        $admin = Role::findByName('Admin');
+        $manager = Role::findByName('Manager');
+        $employee = Role::findByName('Employee');
 
-        $user->assignRole($superAdmin);
+        // Super Admin: All permissions
+        $superAdmin->syncPermissions(Permission::all());
 
-        // Assign all permissions to Super Admin
-        $user->givePermissionTo($globalPermissions);
+        // Admin: View permissions
+        $viewPermissions = Permission::where('name', 'LIKE', 'view_%')->get();
+        $admin->syncPermissions($viewPermissions);
 
-        // Assign selected permissions to other roles
-        //$admin->givePermissionTo(['manage_users', 'view_users', 'manage_roles', 'view_roles']);
-        //$manager->givePermissionTo(['view_sales', 'create_sales', 'view_productions', 'create_productions', 'update_productions']);
-        //$hr->givePermissionTo(['view_users', 'manage_users']);
-        //$employee->givePermissionTo(['view_productions', 'view_sales']);
+        $manager->syncPermissions([
+            'create_purchase_orders',
+            'manage_productions',
+            'view_products',
+            'view_purchase_orders',
+            'create_productions',
+            'create_products',
+            'manage_inventory',
+            'view_productions',
+            'edit_products',
+            'manage_suppliers',
+            'update_productions'
+        ]);
 
-        // Define category-specific permissions
+        // Employee: Sales-related permissions
+        $employee->syncPermissions(['create_sales', 'view_sales']);
+
+        // Manager: Category-specific permissions
         $categories = ['water', 'soap', 'electronics', 'furniture'];
         $actions = ['view', 'create', 'edit', 'delete'];
 
@@ -95,19 +109,16 @@ class RolesSeeder extends Seeder
             foreach ($actions as $action) {
                 $permissionName = "{$action}_category_{$category}";
                 $permission = Permission::firstOrCreate(['name' => $permissionName]);
-
-                // Assign permissions to roles
-                // if (in_array($action, ['view', 'edit'])) {
-                //     $manager->givePermissionTo($permission);
-                // }
-
-                // if ($action === 'view') {
-                //     $employee->givePermissionTo($permission);
-                // }
+                //$manager->givePermissionTo($permission);
             }
         }
 
-        echo "Permissions and roles seeded successfully.";
-    }
+        // Optionally assign Super Admin to a default user (e.g., User ID 1)
+        $superAdminUser = User::find(1);
+        if ($superAdminUser) {
+            $superAdminUser->assignRole($superAdmin);
+        }
 
+        echo "Roles and permissions seeded successfully.";
+    }
 }

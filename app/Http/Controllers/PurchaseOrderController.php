@@ -6,7 +6,6 @@ use App\Models\Category;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class PurchaseOrderController extends Controller
 {
@@ -22,15 +21,23 @@ class PurchaseOrderController extends Controller
     // Show form to create a new purchase order
     public function create()
     {
-        $suppliers = Supplier::all();
-        $categories = Category::all();
+        $categoryId = auth()->user()->category_id;
+        $suppliers = Supplier::when($categoryId != 1, function ($query) use ($categoryId) {
+            // Filter by category_id if it is not 1
+            $query->where('category_id', $categoryId);
+        })->get();
+
+        $categories = Category::when($categoryId != 1, function ($query) use ($categoryId) {
+            // Filter by category_id if it is not 1
+            $query->where('id', $categoryId);
+        })->get();
         return Inertia('procurement/PurchaseOrder/Create', compact('suppliers', 'categories'));
     }
 
     // Store a new purchase order
     public function store(Request $request)
     {
-       $validated = $request->validate([
+        $validated = $request->validate([
             'order_number' => 'required|string|unique:purchase_orders,order_number|max:255',
             'supplier_id' => 'required|exists:suppliers,id',
             'category_id' => 'required|exists:categories,id',
@@ -39,7 +46,7 @@ class PurchaseOrderController extends Controller
             'delivery_status' => 'required|in:Pending,Delivered,Cancelled',
         ]);
 
-       // dd($validated);
+        // dd($validated);
 
         PurchaseOrder::create($validated);
         return redirect()->route('purchase-orders.index')->with('success', 'Purchase order created successfully.');
@@ -48,8 +55,16 @@ class PurchaseOrderController extends Controller
     // Edit purchase order
     public function edit(PurchaseOrder $purchaseOrder)
     {
-        $suppliers = Supplier::all();
-        $categories = Category::all();
+        $categoryId = auth()->user()->category_id;
+        $suppliers = Supplier::when($categoryId != 1, function ($query) use ($categoryId) {
+            // Filter by category_id if it is not 1
+            $query->where('category_id', $categoryId);
+        })->get();
+
+        $categories = Category::when($categoryId != 1, function ($query) use ($categoryId) {
+            // Filter by category_id if it is not 1
+            $query->where('id', $categoryId);
+        })->get();
         return Inertia('procurement/PurchaseOrder/Edit', compact('purchaseOrder', 'suppliers', 'categories'));
     }
 
@@ -67,7 +82,7 @@ class PurchaseOrderController extends Controller
 
         $purchaseOrder->update($request->all());
         return redirect()->route('purchase-orders.index')->with('success', 'Purchase order updated successfully.');
-    }                                   
+    }
 
     // Delete purchase order
     public function destroy(PurchaseOrder $purchaseOrder)

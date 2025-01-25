@@ -34,6 +34,7 @@ class DashboardController extends Controller
 
         // Get categories and their financial metrics (Revenue, Cost, and Profit)
         $categories = Category::with(['products.saleItems', 'products.productions'])
+        ->where('id', '!=', 1)
         ->get()
         ->map(function ($category) {
             // Calculate total revenue from sales

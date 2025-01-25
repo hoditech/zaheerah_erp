@@ -28,9 +28,9 @@ const columns = [
     { label: "Price", key: "price" },
     { label: "Stock", key: "stock" },
     { label: "Weight", key: "weight" },
-    { label: "Weight per Bag", key: "weight_per_bag" },
+    { label: "Weight per Unit", key: "weight_per_unit" },
     { label: "Total Cost", key: "total_cost" },
-    { label: "Remaining Bags", key: "remaining_bags" },
+    { label: "Remaining units", key: "remaining_units" },
     { label: "Supplier", key: "supplier.name" },  // Assuming the supplier relationship is loaded
     { label: "Expiration Date", key: "exp_date" },
     { label: "Batch Number", key: "batch_number" },

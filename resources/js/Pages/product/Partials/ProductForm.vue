@@ -32,11 +32,11 @@ const form = useForm({
     price: '',
     stock: '',
     weight: '',
-    weight_per_bag: '',
+    weight_per_unit: '',
     total_cost: '',
     stock_receive: '',
     stock_release: '',
-    remaining_bags: '',
+    remaining_units: '',
     supplier_id: '',
     exp_date: '',
     batch_number: '',
@@ -95,8 +95,8 @@ const submit = () => {
             <div>
                 <InputLabel for="weight_per_bag" value="Weight per Bag" />
                 <TextInput id="weight_per_bag" type="number" step="0.01" class="mt-1 block w-full"
-                    v-model="form.weight_per_bag" />
-                <InputError class="mt-2" :message="form.errors.weight_per_bag" />
+                    v-model="form.weight_per_unit" />
+                <InputError class="mt-2" :message="form.errors.weight_per_unit" />
             </div>
             <div>
                 <InputLabel for="total_cost" value="Total Cost" />
@@ -116,8 +116,8 @@ const submit = () => {
             </div>
             <div>
                 <InputLabel for="remaining_bags" value="Remaining Bags" />
-                <TextInput id="remaining_bags" type="number" class="mt-1 block w-full" v-model="form.remaining_bags" />
-                <InputError class="mt-2" :message="form.errors.remaining_bags" />
+                <TextInput id="remaining_bags" type="number" class="mt-1 block w-full" v-model="form.remaining_units" />
+                <InputError class="mt-2" :message="form.errors.remaining_units" />
             </div>
             <div>
                 <InputLabel for="supplier" value="Supplier" />

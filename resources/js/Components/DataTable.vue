@@ -58,7 +58,7 @@ watch(
   <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
     <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
       <thead>
-        <tr class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold uppercase tracking-wide">
+        <tr class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold capitalize tracking-wide">
           <th v-for="column in columns" :key="column.key" class="px-6 py-4 border-b text-left">
             {{ column.label }}
           </th>
@@ -105,49 +105,48 @@ watch(
 
 
 <style scoped>
-/* Improving table aesthetics */
 table {
-    border-collapse: collapse; /* Ensuring borders collapse for a cleaner look */
+    border-collapse: collapse; 
 }
 
 th, td {
-    padding: 12px; /* Adjusting padding for better spacing */
+    padding: 12px;
 }
 
 /* Header styles */
 thead th {
-    background-color: #2f855a; /* Darker green for table header */
-    color: #ffffff; /* White text for contrast */
-    font-weight: 600; /* Bold font for headers */
+    background-color: #2f855a; 
+    color: #ffffff; 
+    font-weight: 600; 
 }
 
 /* Alternate row coloring for better readability */
 tbody tr:nth-child(even) {
-    background-color: #f9fafb; /* Light gray for even rows */
+    background-color: #f9fafb; 
 }
 
 tbody tr:hover {
-    background-color: #edf2f7; /* Light hover effect for better UX */
-}
+    background-color: #edf2f7; 
+  }
 
 .dark thead th {
-    background-color: #4a5568; /* Dark mode header background */
+    background-color: #4a5568; 
 }
 
 .dark tbody tr:nth-child(even) {
-    background-color: #2d3748; /* Darker gray for even rows in dark mode */
+    background-color: #2d3748; 
 }
 
 .dark tbody tr:hover {
-    background-color: #3c4858; /* Darker hover effect for dark mode */
+    background-color: #3c4858; 
 }
 
 /* Enhancing the input field for a more modern look */
 input[type="text"] {
-    padding-left: 2rem; /* Add space for the search icon */
+    padding-left: 2rem; 
 }
 
 input::placeholder {
-    color: #a0aec0; /* Placeholder color */
+    color: #a0aec0; 
 }
 </style>

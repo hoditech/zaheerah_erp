@@ -52,7 +52,7 @@ onUnmounted(() => {
             <!-- Sidebar Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <h2 v-if="sidebarOpen || isMobile" class="text-lg font-bold text-green-700 dark:text-gray-300">
-                    <img src="/images/logo.png" alt="Description" class="inline-block w-6 h-6">
+                    <img src="/images/logo2.png" alt="Description" class="inline-block w-18 h-10">
                 </h2>
 
                 <button @click="toggleSidebar" class="p-2">

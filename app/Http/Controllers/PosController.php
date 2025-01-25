@@ -15,12 +15,21 @@ use function Termwind\render;
 
 class PosController extends Controller
 {
-    public function index(){
-        $products = Product::with('category')->get();
-
-       // dd($products);
+    public function index()
+    {
+        // Get the current user's category_id
+        $categoryId = auth()->user()->category_id;
+    
+        // Check if the user's category_id is 1
+        $products = Product::with('category')
+            ->when($categoryId != 1, function ($query) use ($categoryId) {
+                // Filter by category_id if it is not 1
+                $query->where('category_id', $categoryId);
+            })
+            ->get();
+    
         return Inertia::render("POS/Index", [
-            'products'=> $products,
+            'products' => $products,
         ]);
     }
 
@@ -91,7 +100,7 @@ public function generateReceipt(Request $request)
         'total' => $data['total_amount'],
     ];
 
-    Debugbar::info('Click');
+  
 
 
     $pdf = PDF::loadView('receipt', $receiptData);

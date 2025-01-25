@@ -13,18 +13,37 @@ class ProductionController extends Controller
      * Display a listing of production batches.
      */
     public function index()
-    {
-        $batches = Production::with('product')->latest()->get();
-        return inertia('ProductionBatches/Index', compact('batches'));
-    }
+{
+    // Get the current user's category_id
+    $categoryId = auth()->user()->category_id;
+
+    // Fetch production batches based on the user's category_id
+    $batches = Production::with('product')
+        ->when($categoryId != 1, function ($query) use ($categoryId) {
+            // Filter production batches by products that belong to the user's category
+            $query->whereHas('product', function ($productQuery) use ($categoryId) {
+                $productQuery->where('category_id', $categoryId);
+            });
+        })
+        ->latest()
+        ->get();
+
+    return inertia('ProductionBatches/Index', compact('batches'));
+}
 
     /**
      * Show the form for creating a new batch.
      */
     public function create()
     {
-        $categories = Product::all();
-        return inertia('ProductionBatches/Create', compact('categories'));
+        $categoryId = auth()->user()->category_id;
+
+        $products = Product::when($categoryId != 1, function ($query) use ($categoryId) {
+            // Filter by category_id if it is not 1
+            $query->where('category_id', $categoryId);
+        })
+            ->get();
+        return inertia('ProductionBatches/Create', compact('products'));
     }
 
     /**
@@ -32,7 +51,7 @@ class ProductionController extends Controller
      */
     public function store(Request $request)
     {
-        
+
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1',
@@ -54,7 +73,7 @@ class ProductionController extends Controller
         if ($validated['batch_status'] === 'Completed') {
             $product = Product::findOrFail($validated['product_id']);
             $product->stock += $validated['quantity'];
-            $product->save(); 
+            $product->save();
         }
 
 
@@ -69,8 +88,14 @@ class ProductionController extends Controller
     public function edit(Production $production)
     {
 
-        $product = Product::all();
-    
+        $categoryId = auth()->user()->category_id;
+
+        $product = Product::when($categoryId != 1, function ($query) use ($categoryId) {
+            // Filter by category_id if it is not 1
+            $query->where('category_id', $categoryId);
+        })
+            ->get();
+
 
         return Inertia::render('ProductionBatches/Edit', [
             'production' => $production,

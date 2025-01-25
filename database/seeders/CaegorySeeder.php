@@ -15,6 +15,7 @@ class CaegorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
+            ['name' => 'General', 'description' => 'Users not specific to any category'],
             ['name' => 'Cosmetics', 'description' => ''],
             ['name' => 'Agriculture', 'description' => ''],
             ['name' => 'Restaurant', 'description' => ''],

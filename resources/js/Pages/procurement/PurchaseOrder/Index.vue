@@ -33,7 +33,7 @@ const columns = [
 const searchQuery = ref("");
 
 const deleteOrder = (order: any) => {
-  if (confirm(`Are you sure you want to delete the supply: ${order.name}?`)) {
+  if (confirm(`Are you sure you want to delete the order: ${order.name}?`)) {
     router.delete(route('purchase-orders.destroy', order.id), {
       onSuccess: () => console.log(`${order.name} has been deleted successfully.`),
     });

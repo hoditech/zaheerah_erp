@@ -12,7 +12,13 @@ class productController extends Controller
 {
     public function index()
     {
-        $products = Product::with('category')->get();
+        $categoryId = auth()->user()->category_id;
+        $products = Product::with('category')
+        ->when($categoryId != 1, function ($query) use ($categoryId) {
+            // Filter by category_id if it is not 1
+            $query->where('category_id', $categoryId);
+        })
+        ->get();
         //dd($products);
        // Debugbar::info($products);
 
@@ -26,7 +32,14 @@ class productController extends Controller
 
     public function create()
     {
-        $categories = Category::all();
+        $categoryId = auth()->user()->category_id;
+
+        
+        $categories = Category::when($categoryId != 1, function ($query) use ($categoryId) {
+            // Fetch only the user's category if their category_id is not 1
+            $query->where('id', $categoryId);
+        })->get();
+
         $suppliers = Supplier::all();
         return Inertia::render('product/Create',[
             'categories' => $categories
@@ -46,7 +59,7 @@ class productController extends Controller
             'stock_receive' => 'nullable|integer|min:0',
             'stock_release' => 'nullable|integer|min:0',
             'remaining_bags' => 'nullable|integer|min:0',
-            'supplier_id' => 'nullable|exists:suppliers,id',
+            //'supplier_id' => 'nullable|exists:suppliers,id',
             'exp_date' => 'nullable|date',
             'batch_number' => 'nullable|string|max:255',
             'storage_location' => 'nullable|string|max:255',
@@ -61,7 +74,7 @@ class productController extends Controller
             // Flash success message
             return back()->with('message', 'Product created successfully.');
         } catch (\Exception $e) {
-            // Handle unexpected errors
+            dd($e);
             return back()->withErrors(['error' => 'Failed to create product. Please try again.']);
         }
     }

@@ -178,6 +178,6 @@ class EmployeeController extends Controller
     {
         $employee->delete();
 
-        return back()->with('success', 'Employee deleted successfully.');
+        return redirect()->route('employee.index')->back()->with('success', 'Employee deleted successfully.');
     }
 }
