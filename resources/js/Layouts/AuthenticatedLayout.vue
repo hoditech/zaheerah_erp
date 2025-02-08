@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import ApplicationLogo from '@/Components/ApplicationLogo.vue';
-import Dropdown from '@/Components/Dropdown.vue';
-import NavLink from '@/Components/NavLink.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+
 import { Link } from '@inertiajs/vue3';
 // @ts-ignore
 import { is } from 'laravel-permission-to-vuejs'
@@ -109,7 +106,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">HR</span>
                         </Link>
                     </li>
-                    <li v-if="is('Manager | Employee | Super Admin|Admin')" :class="{
+                    <li v-if="is('Manager  | Super Admin|Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -120,7 +117,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Inventory</span>
                         </Link>
                     </li>
-                    <li v-if="is('Manager | Employee | Super Admin|Admin')" :class="{
+                    <li v-if="is('Manager  | Super Admin|Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -142,7 +139,7 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Suppliers</span>
                         </Link>
                     </li>
-                    <li v-if="is('Manager | Employee | Super Admin|Admin')" :class="{
+                    <li v-if="is('Manager | Super Admin|Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,
                         'space-x-2': sidebarOpen,
@@ -151,6 +148,17 @@ onUnmounted(() => {
                         <Link :href="route('purchase-orders.index')" class="flex items-center space-x-2">
                         <span> 🛒</span> <!-- Product Icon -->
                         <span v-if="sidebarOpen || isMobile">Purchase Order</span>
+                        </Link>
+                    </li>
+                    <li v-if="is('Super Admin| Admin')" :class="{
+                        'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
+                        'justify-center': !sidebarOpen,
+                        'space-x-2': sidebarOpen,
+                        'active-link': route().current('finance.index')
+                    }">
+                        <Link :href="route('finance.index')" class="flex items-center space-x-2">
+                        <span> 🏦</span> <!-- Product Icon -->
+                        <span v-if="sidebarOpen || isMobile">Finance</span>
                         </Link>
                     </li>
                     <!-- <li v-if="is('Technical Manager | Super Admin')"

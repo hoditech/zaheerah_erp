@@ -2,13 +2,19 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\FinanceController;
+use App\Http\Controllers\NoticeController;
+use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\productController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\WelcomeController;
+use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -153,6 +159,43 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'destroy'])
         ->name('purchase-orders.destroy')
         ->middleware('permission:delete_purchase_orders');
+
+    // Routes accessible to everyone
+    Route::get('notices', [NoticeController::class, 'index'])->name('notices.index');
+    Route::get('notices/{notice}', [NoticeController::class, 'show'])->name('notices.show');
+
+    Route::get('events', [EventController::class, 'index'])->name('events.index');
+    Route::get('events/{event}', [EventController::class, 'show'])->name('events.show');
+
+
+
+});
+
+// Routes restricted to Super Admin
+Route::middleware(['auth', 'role:Super Admin'])->group(function () {
+    Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+
+    Route::resource('payrolls', PayrollController::class);
+    Route::post('payrolls/{payroll}/mark-paid', [PayrollController::class, 'markAsPaid'])->name('payrolls.markPaid');
+
+    Route::get('/users', function () {
+        $users = User::select('id', 'name')->get(); // Fetch only id & name
+
+        return response()->json([
+            'users' => $users,
+        ]);
+    });
+
+    // Restricted routes for creating, updating, and deleting notices and events
+    Route::post('notices', [NoticeController::class, 'store'])->name('notices.store');
+    Route::put('notices/{notice}', [NoticeController::class, 'update'])->name('notices.update');
+    Route::delete('notices/{notice}', [NoticeController::class, 'destroy'])->name('notices.destroy');
+
+    Route::post('events', [EventController::class, 'store'])->name('events.store');
+    Route::put('events/{event}', [EventController::class, 'update'])->name('events.update');
+    Route::delete('events/{event}', [EventController::class, 'destroy'])->name('events.destroy');
+
+
 });
 
 

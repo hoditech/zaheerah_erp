@@ -4,7 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 // @ts-ignore
-import { can } from 'laravel-permission-to-vuejs'
+import { can , is} from 'laravel-permission-to-vuejs'
 
 
 const props = defineProps({
@@ -45,7 +45,7 @@ const deleteProduct = (product: any) => {
 
 
 let actions: Action[] = [];
-if (can('manage_inventory')) {
+if (is('Super Admin')) {
  actions = [
     { label: "Delete", onClick: deleteProduct, class: "text-red-600 hover:text-red-900" },
     {

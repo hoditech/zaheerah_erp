@@ -4,7 +4,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { PropType, ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 // @ts-ignore
-import { can } from 'laravel-permission-to-vuejs'
+import { is } from 'laravel-permission-to-vuejs'
 
 // Explicitly type the batches prop as an array
 defineProps({
@@ -46,7 +46,7 @@ const editBatch = (batch: any) => {
   router.visit(route('productions.edit', batch.id));
 };
 let actions: Action[] = [];
-if (can('manage_productions')) {
+if (is('Super Admin')) {
  actions = [
   {
     label: "Edit",

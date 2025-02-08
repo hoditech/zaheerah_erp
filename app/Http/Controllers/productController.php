@@ -69,7 +69,10 @@ class productController extends Controller
         //dd($validated);
     
         try {
-            Product::create($validated);
+          $product =  Product::create($validated);
+
+            log_activity('Product Created', 'Created product: ' . $product->name);
+
     
             // Flash success message
             return back()->with('message', 'Product created successfully.');
@@ -83,7 +86,10 @@ class productController extends Controller
 
     public function destroy(Product $product)
     {
+        $productName = $product->name;
         $product->delete();
+        // Log activity for product deletion
+        log_activity('Product Deleted', 'Deleted product: ' . $productName);
         return redirect()->route('products.index')->with('message', 'Product deleted successfully.');
     }
 

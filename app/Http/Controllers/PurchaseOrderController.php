@@ -23,14 +23,13 @@ class PurchaseOrderController extends Controller
     {
         $categoryId = auth()->user()->category_id;
         $suppliers = Supplier::when($categoryId != 1, function ($query) use ($categoryId) {
-            // Filter by category_id if it is not 1
             $query->where('category_id', $categoryId);
         })->get();
 
         $categories = Category::when($categoryId != 1, function ($query) use ($categoryId) {
-            // Filter by category_id if it is not 1
             $query->where('id', $categoryId);
         })->get();
+
         return Inertia('procurement/PurchaseOrder/Create', compact('suppliers', 'categories'));
     }
 
@@ -46,9 +45,11 @@ class PurchaseOrderController extends Controller
             'delivery_status' => 'required|in:Pending,Delivered,Cancelled',
         ]);
 
-        // dd($validated);
+        $purchaseOrder = PurchaseOrder::create($validated);
 
-        PurchaseOrder::create($validated);
+        // Log activity
+        log_activity('Purchase Order Created', "Order #{$purchaseOrder->order_number} was created.");
+
         return redirect()->route('purchase-orders.index')->with('success', 'Purchase order created successfully.');
     }
 
@@ -57,21 +58,20 @@ class PurchaseOrderController extends Controller
     {
         $categoryId = auth()->user()->category_id;
         $suppliers = Supplier::when($categoryId != 1, function ($query) use ($categoryId) {
-            // Filter by category_id if it is not 1
             $query->where('category_id', $categoryId);
         })->get();
 
         $categories = Category::when($categoryId != 1, function ($query) use ($categoryId) {
-            // Filter by category_id if it is not 1
             $query->where('id', $categoryId);
         })->get();
+
         return Inertia('procurement/PurchaseOrder/Edit', compact('purchaseOrder', 'suppliers', 'categories'));
     }
 
     // Update purchase order
     public function update(Request $request, PurchaseOrder $purchaseOrder)
     {
-        $request->validate([
+        $validated = $request->validate([
             'order_number' => 'required|string|max:255|unique:purchase_orders,order_number,' . $purchaseOrder->id,
             'supplier_id' => 'required|exists:suppliers,id',
             'category_id' => 'required|exists:categories,id',
@@ -80,14 +80,23 @@ class PurchaseOrderController extends Controller
             'delivery_status' => 'required|in:Pending,Delivered,Cancelled',
         ]);
 
-        $purchaseOrder->update($request->all());
+        $purchaseOrder->update($validated);
+
+        // Log activity
+        log_activity('Purchase Order Updated', "Order #{$purchaseOrder->order_number} was updated.");
+
         return redirect()->route('purchase-orders.index')->with('success', 'Purchase order updated successfully.');
     }
 
     // Delete purchase order
     public function destroy(PurchaseOrder $purchaseOrder)
     {
+        $orderNumber = $purchaseOrder->order_number;
         $purchaseOrder->delete();
+
+        // Log activity
+        log_activity('Purchase Order Deleted', "Order #{$orderNumber} was deleted.");
+
         return redirect()->route('purchase-orders.index')->with('success', 'Purchase order deleted successfully.');
     }
 }

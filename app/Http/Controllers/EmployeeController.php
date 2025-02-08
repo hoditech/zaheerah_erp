@@ -16,14 +16,11 @@ class EmployeeController extends Controller
      */
     public function index()
     {
-
         $userCategoryId = auth()->user()->category_id;
 
         $employees = User::with(['category', 'roles'])
             ->where('id', '!=', 1)
             ->get();
-
-
 
         return Inertia::render('HR/Index', [
             'employees' => $employees,
@@ -39,13 +36,10 @@ class EmployeeController extends Controller
         $roles = Role::all();
         $permissions = Permission::all(); // Fetch all permissions
 
-
-
         return Inertia::render('HR/Create', [
             'categories' => $categories,
             'roles' => $roles,
             'permissions' => $permissions,
-
         ]);
     }
 
@@ -67,13 +61,12 @@ class EmployeeController extends Controller
                 'selected_permissions.*' => 'exists:permissions,id',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            dd($e->errors()); // Display validation errors
+            //dd($e->errors()); // Display validation errors
         }
+        
         $validated['password'] = bcrypt($validated['password']);
 
-
         $role = Role::find($validated['role_id']);
-
 
         $user = User::create([
             'name' => $validated['name'],
@@ -87,6 +80,9 @@ class EmployeeController extends Controller
         $user->assignRole($role);
         $user->syncPermissions($validated['selected_permissions'] ?? []);
 
+        // Log the activity
+        log_activity('Create Employee', 'Created employee: ' . $user->name);
+
         return redirect()->route('employees.index')
             ->with('success', 'Employee added successfully.');
     }
@@ -96,7 +92,6 @@ class EmployeeController extends Controller
      */
     public function edit(User $employee)
     {
-
         $categories = Category::all();
         $roles = Role::all();
         $permissions = Permission::all();
@@ -104,7 +99,6 @@ class EmployeeController extends Controller
         // Fetch the employee's current role and permissions
         $employeeRole = $employee->roles->pluck('id')->first();
         $employeePermissions = $employee->getAllPermissions()->pluck('id');
-
 
         return Inertia::render('HR/Edit', [
             'employee' => $employee,
@@ -125,21 +119,16 @@ class EmployeeController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'phone' => 'nullable|string|max:15',
-                //'email' => 'required|string|lowercase|email|max:255|unique:',
                 'can_login' => 'required|boolean',
                 'category_id' => 'required|exists:categories,id',
                 'password' => 'nullable|string|min:8|confirmed', // Password is optional
-                'role_id' => 'required|exists:roles,id', // Assuming you're passing role name
+                'role_id' => 'required|exists:roles,id',
                 'selected_permissions' => 'array',
                 'selected_permissions.*' => 'exists:permissions,id',
             ]);
-
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             dd($e->errors()); // Display validation errors
         }
-
-        //dd($validated);
 
         // Update password only if provided
         if (!empty($validated['password'])) {
@@ -166,16 +155,21 @@ class EmployeeController extends Controller
             }
         });
 
+        // Log the activity
+        log_activity('Update Employee', 'Updated employee: ' . $employee->name);
+
         return redirect()->route('employees.index')
             ->with('success', 'Employee updated successfully.');
     }
-
 
     /**
      * Remove the specified employee from storage.
      */
     public function destroy(User $employee)
     {
+        // Log the activity before deleting
+        log_activity('Delete Employee', 'Deleted employee: ' . $employee->name);
+
         $employee->delete();
 
         return redirect()->route('employee.index')->back()->with('success', 'Employee deleted successfully.');

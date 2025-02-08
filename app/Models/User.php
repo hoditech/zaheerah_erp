@@ -57,4 +57,14 @@ class User extends Authenticatable
      {
          return $this->belongsTo(Category::class);
      }
+
+     public function payrolls()
+     {
+         return $this->hasMany(Payroll::class);
+     }
+
+     public function activityLogs(){
+        return $this->hasMany(ActivityLog::class);
+     }
+     
 }

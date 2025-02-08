@@ -67,15 +67,18 @@ class ProductionController extends Controller
 
         // Update batch_number with the formatted string
         $validated['batch_number'] = 'BATCH-' . str_pad($batchId, 5, '0', STR_PAD_LEFT);
-        Production::create($validated);
+        $production = Production::create($validated);
 
         // Update product stock if the batch status is "Completed"
         if ($validated['batch_status'] === 'Completed') {
             $product = Product::findOrFail($validated['product_id']);
             $product->stock += $validated['quantity'];
             $product->save();
+
+            // Log activity
         }
 
+        log_activity('Production Created', 'Created production batch: ' . $production->batch_number);
 
         // Create the production batch
 
@@ -130,6 +133,9 @@ class ProductionController extends Controller
         // Update the ProductionBatch
         $production->update($validated);
 
+        log_activity('Production Updated', 'Updated production batch: ' . $production->batch_number);
+
+
         // Redirect with success message
         return redirect()->route('productions.index')->with('success', 'Batch updated successfully.');
     }
@@ -140,7 +146,11 @@ class ProductionController extends Controller
      */
     public function destroy(Production $production)
     {
+        $batchNumber = $production->batch_number;
         $production->delete();
+
+        // Log activity
+        log_activity('Production Deleted', 'Deleted production batch: ' . $batchNumber);
         return redirect()->route('productions.index')->with('success', 'Batch deleted successfully.');
     }
 }
