@@ -24,6 +24,7 @@ class User extends Authenticatable
         'name',
         'email',
         'phone',
+        'employee_id',
         'category_id',
         'can_login',
         'password',
@@ -66,5 +67,26 @@ class User extends Authenticatable
      public function activityLogs(){
         return $this->hasMany(ActivityLog::class);
      }
+
+     public static function generateUserCode()
+    {
+        $year = date('Y'); // Get current year
+        $prefix = "ZVL/{$year}/HR/SS/";
+
+        // Get the last user_code from the database
+        $lastUser = User::where('employee_id', 'LIKE', "{$prefix}%")
+                        ->orderBy('employee_id', 'desc')
+                        ->first();
+
+        if ($lastUser) {
+            // Extract the last number and increment it
+            $lastNumber = (int) substr($lastUser->user_code, -3);
+            $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+        } else {
+            $newNumber = '001';
+        }
+
+        return $prefix . $newNumber;
+    }
      
 }

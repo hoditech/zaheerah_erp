@@ -28,6 +28,12 @@ class FinanceController extends Controller
         // Calculate total profit (Revenue - Production Cost - Payroll Expense)
         $totalProfit = $totalRevenue - ($totalCost + $totalPayrollExpense);
 
+        // dd([
+        //     'totalRevenue'=> $totalRevenue,
+        //     'totalCost'=> $totalCost,
+        //     'totalPayrollExpense'=> $totalPayrollExpense,
+        // ]);
+
         // Get total stock levels
         $totalStock = Product::sum('stock');
 

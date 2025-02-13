@@ -3,13 +3,31 @@
 namespace App\Http\Controllers;
 
 
+use App\Models\Product;
+use App\Models\Production;
+use App\Models\Sale;
 use App\Models\User;
+use DB;
 
 
 class DashboardController extends Controller
 {
     public function index()
     {
+
+        // // Retrieve total revenue (total sales)
+        $totalRevenue = Sale::sum('total_amount');
+        // // Retrieve total cost (sum of material cost, labor cost, and overhead cost for all productions)
+        $totalCost = Production::sum(DB::raw('material_cost + labor_cost + overhead_cost'));
+
+        // //dd($totalCost);
+// // Calculate total profit (Revenue - Cost)
+        $totalProfit = $totalRevenue - $totalCost;
+
+        // // Retrieve stock levels
+        $totalStock = Product::sum('stock');
+
+
         $usersCount = User::count();
         $activeUsersCount = User::where('can_login', true)->count(); // Adjust based on your status column
         $newUsersCount = User::whereDate('created_at', now()->toDateString())->count(); // Users registered today
@@ -17,15 +35,15 @@ class DashboardController extends Controller
         $user = auth()->user();
 
         $logs = $user->activityLogs()
-            ->latest() 
-            ->with('user') 
-            ->take(15) 
+            ->latest()
+            ->with('user')
+            ->take(15)
             ->get()
             ->map(function ($log) {
                 return [
                     'id' => $log->id,
-                    'action' => $log->action, 
-                    'description' => $log->description, 
+                    'action' => $log->action,
+                    'description' => $log->description,
                     'created_at' => $log->created_at,
                     'user_name' => $log->user ? $log->user->name : 'Unknown', // Add the user's name
                 ];
@@ -36,6 +54,9 @@ class DashboardController extends Controller
             'activeUsersCount' => $activeUsersCount,
             'newUsersCount' => $newUsersCount,
             'logs' => $logs,
+            'totalRevenue' => '₦' . number_format($totalRevenue, 2),
+            'totalProfit' => '₦' . number_format($totalProfit, 2),
+            'totalCost' => '₦' . number_format($totalCost, 2),
         ]);
     }
 }

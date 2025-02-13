@@ -13,17 +13,17 @@ return new class extends Migration
     {
         Schema::create('payrolls', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Links to employees
-            $table->decimal('base_salary', 10, 2)->nullable(); // Fixed salary
-            $table->decimal('overtime_pay', 10, 2)->default(0); // Extra work pay
-            $table->decimal('bonuses', 10, 2)->default(0); // Extra earnings
-            $table->decimal('deductions', 10, 2)->default(0); // E.g., loans, penalties
-            $table->decimal('tax', 10, 2)->default(0); // Taxation
-            $table->decimal('commission', 10, 2)->default(0); // Commission-based earnings
-            $table->decimal('net_salary', 10, 2)->nullable(); // Final amount after deductions
-            $table->enum('payment_method', ['bank_transfer', 'cash', 'mobile_money'])->default('bank_transfer'); // Payment mode
-            $table->enum('payment_status', ['pending', 'paid'])->default('pending'); // Payment status
-            $table->date('payment_date')->nullable(); // Date of payment
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); 
+            $table->decimal('base_salary', 10, 2)->nullable(); 
+            $table->decimal('overtime_pay', 10, 2)->default(0); 
+            $table->decimal('bonuses', 10, 2)->default(0); 
+            $table->decimal('deductions', 10, 2)->default(0); 
+            $table->decimal('tax', 10, 2)->default(0); 
+            $table->decimal('commission', 10, 2)->default(0); 
+            $table->decimal('net_salary', 10, 2)->nullable(); 
+            $table->enum('payment_method', ['bank_transfer', 'cash', 'mobile_money'])->default('bank_transfer'); 
+            $table->enum('payment_status', ['pending', 'paid'])->default('pending'); 
+            $table->date('payment_date')->nullable(); 
             $table->timestamps();
         });
     }

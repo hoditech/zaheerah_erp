@@ -38,6 +38,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('products.store')
         ->middleware('permission:create_products');
 
+    Route::get('/products/{product}', [productController::class, 'edit'])
+    ->name('products.edit')
+    ->middleware('permission:edit_products');
+
+    Route::put('/products/{product}', [productController::class, 'update'])
+    ->name('products.update')
+    ->middleware('permission:edit_products');
+
+    Route::delete('/products/{product}', [productController::class, 'destroy'])
+    ->name('products.destroy')
+    ->middleware('permission:delete_products');
+
     Route::get('/pos', [PosController::class, 'index'])
         ->name('pos')
         ->middleware('permission:view_sales');
@@ -166,6 +178,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('events', [EventController::class, 'index'])->name('events.index');
     Route::get('events/{event}', [EventController::class, 'show'])->name('events.show');
+
+    Route::get('/products/{product}/stock', [PosController::class, 'getStock']);
+
 
 
 

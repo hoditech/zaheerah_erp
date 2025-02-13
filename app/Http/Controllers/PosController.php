@@ -11,23 +11,21 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Barryvdh\Debugbar\Facades\Debugbar;
 
+use Str;
 use function Termwind\render;
 
 class PosController extends Controller
 {
     public function index()
     {
-        // Get the current user's category_id
         $categoryId = auth()->user()->category_id;
-    
-        // Check if the user's category_id is 1
+
         $products = Product::with('category')
             ->when($categoryId != 1, function ($query) use ($categoryId) {
-                // Filter by category_id if it is not 1
                 $query->where('category_id', $categoryId);
             })
-            ->get();
-    
+            ->get(); // Paginate with 10 items per page
+
         return Inertia::render("POS/Index", [
             'products' => $products,
         ]);
@@ -46,69 +44,119 @@ class PosController extends Controller
         DB::beginTransaction();
 
         try {
-            // Create the sale record
-            $sale = Sale::create(['total_amount' => $validated['total_amount']]);
+            // Create the sale record with additional metadata
+            $sale = Sale::create([
+                'total_amount' => number_format($validated['total_amount'], 2, '.', ''),
+                'receipt_number' => 'RC-' . str_pad(Sale::max('id') + 1, 6, '0', STR_PAD_LEFT),
+                'transaction_id' => Str::upper(Str::random(12)),
+            ]);
 
+            $saleItems = [];
             foreach ($validated['items'] as $item) {
-                // Fetch the product
-                $product = Product::find($item['product_id']);
+                $product = Product::findOrFail($item['product_id']);
 
-                // Check if enough stock is available
                 if ($product->stock < $item['quantity']) {
-                    throw new \Exception("Insufficient stock for product ID {$item['product_id']}");
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Insufficient stock for {$product->name} (Available: {$product->stock})",
+                    ], 400);
                 }
 
-                // Deduct stock
-                $product->decrement('stock', $item['quantity']);
-
-                // Create the sale item record
+                // Store product name at time of sale
                 SaleItem::create([
                     'sale_id' => $sale->id,
-                    'product_id' => $item['product_id'],
+                    'product_id' => $product->id,
+                    'product_name' => $product->name, // Capture current product name
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
                 ]);
 
-                // Log the activity of stock deduction
-                log_activity('Stock Deduction', 'Deducted ' . $item['quantity'] . ' of ' . $product->name . ' from stock.');
+                // Log sale creation
+                log_activity(
+                    'Stock Deduction',
+                    "Deducted {$item['quantity']} units of {$product->name}. Remaining stock: {$product->stock}",
+                );
+
+                $product->decrement('stock', $item['quantity']);
+                $saleItems[] = [
+                    'name' => $product->name,
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                ];
             }
 
-            // Log the activity of sale creation
-            log_activity('Sale Created', 'Sale created with ID: ' . $sale->id . ' for total amount: ' . $sale->total_amount);
+            log_activity(
+                'Sale Completed',
+                "Sale #{$sale->receipt_number} recorded for ₦" . number_format($sale->total_amount, 2),
+            );
 
             DB::commit();
 
             return response()->json([
+                'success' => true,
                 'message' => 'Sale completed successfully',
-                'sale_id' => $sale->id,
+                'receipt_data' => [
+                    'receipt_number' => $sale->receipt_number,
+                    'transaction_id' => $sale->transaction_id,
+                    'date' => $sale->created_at->format('M j, Y H:i:s'),
+                    'items' => $saleItems,
+                    'total_amount' => $sale->total_amount,
+                    'store_info' => [
+                        'address' => 'No 144 Allasawa Daza Housing Estate Gusau Zamfara State',
+                        'contact' => 'contact@zaheerah.com',
+                        'phone' => '+234 806 2242 794'
+                    ]
+                ]
             ], 200);
+
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Sale Error: ' . $e->getMessage());
 
             return response()->json([
-                'message' => 'An error occurred while processing the sale',
-                'error' => $e->getMessage(),
+                'success' => false,
+                'message' => 'Transaction failed: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     public function generateReceipt(Request $request)
     {
-        $data = $request->all();
+        \Log::info('Request Data:', $request->all());
 
         $receiptData = [
-            'logo' => asset('images/your-logo.png'), // Update with your actual logo path
-            'businessName' => 'Your Business Name',
-            'businessAddress' => '123 Business St, Lagos, Nigeria',
-            'items' => $data['items'], // Array of items with name, price, quantity
-            'total' => $data['total_amount'],
+            'items' => $request->items,
+            'total' => $request->total_amount,
         ];
 
-        $pdf = PDF::loadView('receipt', $receiptData);
+        try {
+            // Generate the receipt HTML content instead of PDF
+            $receiptHtml = view('receipt', $receiptData)->render();
 
-        // Log the activity of receipt generation
-        log_activity('Receipt Generated', 'Generated receipt for sale with total amount: ' . $data['total_amount']);
+            // Return the HTML content as the response
+            return response($receiptHtml, 200)->header('Content-Type', 'text/html');
+        } catch (\Exception $e) {
+            \Log::error($e);
+            return response()->json([
+                'message' => 'Error generating receipt',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
-        return $pdf->stream('receipt.pdf'); 
+
+    /**
+     * Get the stock of a specific product.
+     *
+     * @param  Product  $product
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStock(Product $product)
+    {
+        // Return the stock information
+        return response()->json([
+            'product_id' => $product->id,
+            'stock' => $product->stock,
+        ]);
     }
 }

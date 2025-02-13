@@ -44,11 +44,15 @@ const form = useForm({
     category_id: '',
 });
 
+
 const submit = () => {
     form.post(route('products.store'), {
         onSuccess: () => {
             form.reset();
         },
+    onError: (errors) => {
+      console.log('Form errors:', errors);
+    }
     });
 };
 </script>
@@ -93,8 +97,8 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.weight" />
             </div>
             <div>
-                <InputLabel for="weight_per_bag" value="Weight per Bag" />
-                <TextInput id="weight_per_bag" type="number" step="0.01" class="mt-1 block w-full"
+                <InputLabel for="weight_per_unit" value="Weight per unit" />
+                <TextInput id="weight_per_unit" type="number" step="0.01" class="mt-1 block w-full"
                     v-model="form.weight_per_unit" />
                 <InputError class="mt-2" :message="form.errors.weight_per_unit" />
             </div>
@@ -115,21 +119,11 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.stock_release" />
             </div>
             <div>
-                <InputLabel for="remaining_bags" value="Remaining Bags" />
-                <TextInput id="remaining_bags" type="number" class="mt-1 block w-full" v-model="form.remaining_units" />
+                <InputLabel for="remaining_units" value="Remaining units" />
+                <TextInput id="remaining_units" type="number" class="mt-1 block w-full" v-model="form.remaining_units" />
                 <InputError class="mt-2" :message="form.errors.remaining_units" />
             </div>
-            <div>
-                <InputLabel for="supplier" value="Supplier" />
-                <select id="supplier" v-model="form.supplier_id"
-                    class="mt-1 block w-full rounded-md shadow-sm border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    <option value="" disabled>Select a supplier</option>
-                    <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">
-                        {{ supplier.name }}
-                    </option>
-                </select>
-                <InputError class="mt-2" :message="form.errors.supplier_id" />
-            </div>
+          
             <div>
                 <InputLabel for="exp_date" value="Expiration Date" />
                 <TextInput id="exp_date" type="date" class="mt-1 block w-full" v-model="form.exp_date" />
@@ -139,6 +133,18 @@ const submit = () => {
                 <InputLabel for="batch_number" value="Batch Number" />
                 <TextInput id="batch_number" type="text" class="mt-1 block w-full" v-model="form.batch_number" />
                 <InputError class="mt-2" :message="form.errors.batch_number" />
+            </div>
+            <div>
+                <InputLabel for="supplier" value="Supplier" />
+                <select id="supplier" v-model="form.supplier_id"
+                    class="mt-1 block w-full rounded-md shadow-sm border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    >
+                    <option value="" disabled>Select a Supplier</option>
+                    <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">
+                        {{ supplier.name }}
+                    </option>
+                </select>
+                <InputError class="mt-2" :message="form.errors.category_id" />
             </div>
             <div>
                 <InputLabel for="storage_location" value="Storage Location" />

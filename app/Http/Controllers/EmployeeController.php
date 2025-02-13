@@ -74,7 +74,8 @@ class EmployeeController extends Controller
             'phone' => $validated['phone'],
             'category_id' => $validated['category_id'],
             'password' => $validated['password'],
-            'can_login' => $validated['can_login']
+            'can_login' => $validated['can_login'],
+            'employee_id'=> User::generateUserCode(),
         ]);
 
         $user->assignRole($role);

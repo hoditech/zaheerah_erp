@@ -14,13 +14,14 @@ class productController extends Controller
     {
         $categoryId = auth()->user()->category_id;
         $products = Product::with('category')
-        ->when($categoryId != 1, function ($query) use ($categoryId) {
-            // Filter by category_id if it is not 1
-            $query->where('category_id', $categoryId);
-        })
-        ->get();
+            ->when($categoryId != 1, function ($query) use ($categoryId) {
+                // Filter by category_id if it is not 1
+                $query->where('category_id', $categoryId);
+            })
+            ->get();
+
         //dd($products);
-       // Debugbar::info($products);
+        // Debugbar::info($products);
 
         return Inertia::render('product/ProductPage', props: [
             'products' => $products,
@@ -34,15 +35,16 @@ class productController extends Controller
     {
         $categoryId = auth()->user()->category_id;
 
-        
+
         $categories = Category::when($categoryId != 1, function ($query) use ($categoryId) {
             // Fetch only the user's category if their category_id is not 1
             $query->where('id', $categoryId);
         })->get();
 
         $suppliers = Supplier::all();
-        return Inertia::render('product/Create',[
-            'categories' => $categories
+        return Inertia::render('product/Create', [
+            'categories' => $categories,
+            'suppliers' => $suppliers,
         ]);
     }
 
@@ -54,12 +56,12 @@ class productController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'weight' => 'nullable|numeric|min:0',
-            'weight_per_bag' => 'nullable|numeric|min:0',
+            'weight_per_init' => 'nullable|numeric|min:0',
             'total_cost' => 'nullable|numeric|min:0',
             'stock_receive' => 'nullable|integer|min:0',
             'stock_release' => 'nullable|integer|min:0',
-            'remaining_bags' => 'nullable|integer|min:0',
-            //'supplier_id' => 'nullable|exists:suppliers,id',
+            'remaining_units' => 'nullable|integer|min:0',
+            'supplier_id' => 'nullable|exists:suppliers,id',
             'exp_date' => 'nullable|date',
             'batch_number' => 'nullable|string|max:255',
             'storage_location' => 'nullable|string|max:255',
@@ -67,21 +69,65 @@ class productController extends Controller
         ]);
 
         //dd($validated);
-    
+
         try {
-          $product =  Product::create($validated);
+            $product = Product::create($validated);
 
             log_activity('Product Created', 'Created product: ' . $product->name);
 
-    
+
             // Flash success message
-            return back()->with('message', 'Product created successfully.');
+            return redirect()->route('products')->with('success', 'Product created successfully.');
         } catch (\Exception $e) {
-            dd($e);
+            // dd($e);
             return back()->withErrors(['error' => 'Failed to create product. Please try again.']);
         }
     }
-    
+
+    public function edit(Product $product)
+    {
+        //dd($product);
+        $categories = Category::all();
+        return Inertia::render('product/Edit', [
+            'product' => $product,
+            'categories' => $categories
+        ]);
+
+    }
+
+    public function update(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+            'weight' => 'nullable|numeric|min:0',
+            'weight_per_bag' => 'nullable|numeric|min:0',
+            'total_cost' => 'nullable|numeric|min:0',
+            'stock_receive' => 'nullable|integer|min:0',
+            'stock_release' => 'nullable|integer|min:0',
+            'remaining_bags' => 'nullable|integer|min:0',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'exp_date' => 'nullable|date',
+            'batch_number' => 'nullable|string|max:255',
+            'storage_location' => 'nullable|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+        ]);
+
+        try {
+            // Update the product
+            $product->update($validated);
+
+            // Log activity
+            log_activity('Product Updated', 'Updated product: ' . $product->name);
+
+            // Flash success message
+            return redirect()->route('products')->with('success', 'Product updated successfully.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to update product. Please try again.']);
+        }
+    }
+
 
 
     public function destroy(Product $product)
@@ -90,7 +136,7 @@ class productController extends Controller
         $product->delete();
         // Log activity for product deletion
         log_activity('Product Deleted', 'Deleted product: ' . $productName);
-        return redirect()->route('products.index')->with('message', 'Product deleted successfully.');
+        return redirect()->route('products')->with('success', 'Product deleted successfully.');
     }
 
 }

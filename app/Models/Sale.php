@@ -9,7 +9,7 @@ class Sale extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['total_amount'];
+    protected $fillable = ['total_amount', 'receipt_number', 'transaction_id'];
 
     public function items()
     {

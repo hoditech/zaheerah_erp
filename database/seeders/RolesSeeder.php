@@ -62,6 +62,7 @@ class RolesSeeder extends Seeder
         $roles = [
             'Super Admin',
             'Admin',
+            'Finance',
             'Manager',
             'HR',
             'Employee',
@@ -74,6 +75,7 @@ class RolesSeeder extends Seeder
         // Assign global permissions to roles
         $superAdmin = Role::findByName('Super Admin');
         $admin = Role::findByName('Admin');
+        $finance = Role::findByName('Finance');
         $manager = Role::findByName('Manager');
         $employee = Role::findByName('Employee');
 
@@ -96,6 +98,12 @@ class RolesSeeder extends Seeder
             'edit_products',
             'manage_suppliers',
             'update_productions'
+        ]);
+
+        $finance->syncPermissions([
+            'view_dashboard',
+            'generate_reports',
+            'generate_sales_reports',
         ]);
 
         // Employee: Sales-related permissions

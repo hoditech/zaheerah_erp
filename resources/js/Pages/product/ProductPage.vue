@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 // @ts-ignore
-import { can , is} from 'laravel-permission-to-vuejs'
+import { can, is } from 'laravel-permission-to-vuejs'
+import Edit from '../HR/Edit.vue';
 
 
 const props = defineProps({
@@ -15,10 +16,13 @@ const props = defineProps({
 });
 
 interface Action {
-  label: string;
-  onClick: (employee: any) => void;
-  class: string;
+    label: string;
+    onClick: (employee: any) => void;
+    class: string;
 }
+
+
+
 
 
 const columns = [
@@ -39,21 +43,33 @@ const columns = [
 const searchQuery = ref("");
 
 const deleteProduct = (product: any) => {
-    console.log('Delete Product:', product);
+    if (confirm(`Are you sure you want to delete the order: ${product.name}?`)) {
+        router.delete(route('products.destroy', product.id), {
+            onSuccess: () => console.log(`${product.name} has been deleted successfully.`),
+        });
+    }
 };
+
+const editProduct = (product: any) => {
+    router.visit(route('products.edit', product.id),{
+        onError: (e) => console.log(e),
+    });
+}
 
 
 
 let actions: Action[] = [];
 if (is('Super Admin')) {
- actions = [
-    { label: "Delete", onClick: deleteProduct, class: "text-red-600 hover:text-red-900" },
-    {
-        label: "Edit",
-        onClick: (product: any) => console.log("Edit", product),
-        class: "text-blue-600 hover:text-blue-900",
-    },
-];}
+    actions = [
+        {
+            label: "Edit",
+            onClick: editProduct,
+            class: "text-blue-600 hover:text-blue-900",
+        },
+        { label: "Delete", onClick: deleteProduct, class: "text-red-600 hover:text-red-900" },
+
+    ];
+}
 
 // Function to export products as CSV
 const exportToCSV = () => {
@@ -84,6 +100,7 @@ const exportToCSV = () => {
 </script>
 
 <template>
+
     <Head title="Product Management" />
     <AuthenticatedLayout>
         <template #header>
@@ -92,29 +109,24 @@ const exportToCSV = () => {
 
         <div class="py-6">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div v-if="$page.props.flash.success" class="bg-green-100 text-green-700 px-4 py-2 rounded mb-4">
+                    {{ $page.props.flash.success }}
+                </div>
                 <!-- Header with Search Bar, Export Button, and New Product Button -->
                 <div class="flex justify-between items-center mb-6">
                     <div class="relative w-1/3">
-                        <input 
-                            v-model="searchQuery" 
-                            type="text" 
-                            placeholder="Search products..." 
-                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300" 
-                        />
+                        <input v-model="searchQuery" type="text" placeholder="Search products..."
+                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300" />
                     </div>
                     <div class="flex space-x-4">
-                        <button 
-                            @click="exportToCSV" 
-                            class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out"
-                        >
+                        <button @click="exportToCSV"
+                            class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out">
                             Export to CSV
                         </button>
-                        <Link
-                         :href="route('products.create')"
-                            class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out"
-                        >
-                            New Product
-                    </Link>
+                        <Link :href="route('products.create')"
+                            class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out">
+                        New Product
+                        </Link>
                     </div>
                 </div>
 

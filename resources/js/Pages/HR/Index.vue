@@ -30,6 +30,7 @@ const formattedEmployees = props.employees.map((employee) => ({
 }));
 
 const columns = [
+  { label: "ID", key: "employee_id" },
   { label: "Name", key: "name" },
   { label: "Email", key: "email" },
   { label: "Phone", key: "phone" },
