@@ -1,5 +1,5 @@
 <template>
-    <aside class="w-64 bg-white dark:bg-gray-800 border-r border-gray-300 dark:border-gray-700 p-4">
+    <aside class="w-48 bg-white dark:bg-gray-800 border-r border-gray-300 dark:border-gray-700 p-4">
         <nav>
             <ul class="space-y-3">
                 <li v-for="tab in tabs" :key="tab">

@@ -10,12 +10,22 @@ export const fetchUsers = async () => {
     }
 };
 
-export const fetchPayrols = async () => {
+export const fetchPayrolls = async () => {
     try {
         const response = await axios.get('/payrolls');
         return response.data.payrolls;
     } catch (error) {
         console.error('Error fetching payrolls:', error);
+        return [];
+    }
+};
+
+export const deletePayroll = async (id: number) => {
+    try {
+        const response = await axios.delete(`/payrolls/${id}`);
+        return response.data.payrolls;
+    } catch (error) {
+        console.error('Error deleeting payrolls:', error);
         return [];
     }
 };
@@ -33,4 +43,9 @@ export const submitPayroll = async (payrollData: object) => {
         }
         throw error;
     }
+};
+
+export const updatePayroll = async (id: number, data: any) => {
+    const response = await axios.put(`/payrolls/${id}`, data);
+    return response.data;
 };

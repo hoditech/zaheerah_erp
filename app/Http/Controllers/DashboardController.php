@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 
+use App\Models\ActivityLog;
 use App\Models\Product;
 use App\Models\Production;
 use App\Models\Sale;
@@ -34,20 +35,24 @@ class DashboardController extends Controller
 
         $user = auth()->user();
 
-        $logs = $user->activityLogs()
-            ->latest()
-            ->with('user')
-            ->take(15)
-            ->get()
-            ->map(function ($log) {
-                return [
-                    'id' => $log->id,
-                    'action' => $log->action,
-                    'description' => $log->description,
-                    'created_at' => $log->created_at,
-                    'user_name' => $log->user ? $log->user->name : 'Unknown', // Add the user's name
-                ];
-            });
+        if ($user->hasRole('Super Admin')) {
+            // Admin: Fetch the latest 100 logs across all users
+            $logsQuery = ActivityLog::latest()->with('user')->take(300);
+
+        } else {
+            // Non-admin: Fetch only the user's own logs
+            $logsQuery = $user->activityLogs()->latest()->with('user')->take(200);
+        }
+        
+        $logs = $logsQuery->get()->map(function ($log) {
+            return [
+                'id'          => $log->id,
+                'action'      => $log->action,
+                'description' => $log->description,
+                'created_at'  => $log->created_at,
+                'user_name'   => $log->user ? $log->user->name : 'Unknown',
+            ];
+        });
 
         return inertia('Dashboard', [
             'usersCount' => $usersCount,

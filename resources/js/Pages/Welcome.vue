@@ -16,10 +16,10 @@ function handleImageError() {
 }
 
 const socialLinks = [
-    { icon: 'fab fa-facebook-f', url: '#' },
-    { icon: 'fab fa-twitter', url: '#' },
-    { icon: 'fab fa-linkedin-in', url: '#' },
-    { icon: 'fab fa-instagram', url: '#' },
+    { icon: 'fab fa-facebook-f', url: 'https://web.facebook.com/ZaheerahGroup/' },
+    { icon: 'fab fa-twitter', url: 'https://x.com/ZaheerahGroup' },
+    { icon: 'fab fa-linkedin-in', url: 'https://www.linkedin.com/company/zaheerah-ventures-limited' },
+    { icon: 'fab fa-instagram', url: 'https://www.instagram.com/zaheerahgroup/' },
 ];
 
 </script>

@@ -13,7 +13,6 @@
         <div class="p-6">
 
             <!-- Loading Indicator -->
-            <!-- Loading Indicator -->
             <div v-if="isLoading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
                 <div class="relative w-16 h-16">
                     <div
@@ -33,7 +32,7 @@
             </div>
 
             <!-- Stats Section -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div v-if="is('Super Admin')" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-white dark:bg-gray-700 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                     <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200">Total Revenue</h3>
                     <p class="text-2xl font-bold text-blue-500 dark:text-gray-100">{{ totalRevenue }}</p>
@@ -49,7 +48,7 @@
             </div>
 
             <!-- Stats Section -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div v-if="is('Super Admin | Manager')" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-white dark:bg-gray-700 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                     <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200">Total Employees</h3>
                     <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ usersCount }}</p>
@@ -126,23 +125,30 @@
 
             <!-- Recent Activity Section -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-                <h3 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Recent Employee Activity</h3>
-                <ul class="space-y-5">
-                    <!-- Loop through logs -->
-                    <li v-for="log in logs" :key="log.id"
-                        class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition duration-200">
-                        <span class="text-gray-700 dark:text-gray-300 text-base">
-                            <!-- Display user_name and action -->
-                            <strong class="font-medium">{{ log.action }}:</strong> {{ log.user_name }} <span
-                                class="text-gray-600 dark:text-gray-400">{{ log.description }}</span>
-                        </span>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">
-                            <!-- Format the timestamp as needed (you can adjust this for your desired format) -->
-                            {{ formatDate(log.created_at) }}
-                        </span>
-                    </li>
-                </ul>
+                <h3 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
+                    Recent Employee Activity
+                </h3>
+                <!-- Wrapper with fixed height and scrollable overflow -->
+                <div class="h-64 overflow-y-auto">
+                    <ul class="space-y-5">
+                        <!-- Loop through logs -->
+                        <li v-for="log in logs" :key="log.id"
+                            class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition duration-200">
+                            <span class="text-gray-700 dark:text-gray-300 text-base">
+                                <!-- Display user_name and action -->
+                                <strong class="font-medium">{{ log.action }}:</strong>
+                                {{ log.user_name }}
+                                <span class="text-gray-600 dark:text-gray-400">{{ log.description }}</span>
+                            </span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                <!-- Format the timestamp as needed -->
+                                {{ formatDate(log.created_at) }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
             </div>
+
         </div>
 
 

@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import * as XLSX from 'xlsx'; 
 
 const props = withDefaults(defineProps<{
   categories?: {
@@ -86,25 +87,60 @@ const filteredReports = computed(() => {
   }) as { [key: string]: any }[];
 });
 
+
 const exportReports = (format: string) => {
-  const headers = selectedColumns.value.map(col => col.replace(/([A-Z])/g, ' $1').toUpperCase());
+  const headers = selectedColumns.value.map(col => 
+    col.replace(/([A-Z])/g, ' $1').toUpperCase()
+  );
+  
+  // Prepare data for Excel
+  const excelData = [
+    headers,
+    ...filteredReports.value.map(report =>
+      selectedColumns.value.map(col => report[col] ?? 'N/A')
+    )
+  ];
+
   const rows = filteredReports.value.map(report =>
-    selectedColumns.value.map(col => report[col] ?? 'N/A').join(",")
-  ).join("\n");
+    selectedColumns.value.map(col => {
+      const value = report[col] ?? 'N/A';
+      const escaped = String(value).replace(/"/g, '""');
+      return `"${escaped}"`;
+    }).join(',')
+  ).join('\r\n');
 
-  const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows;
-  const encodedUri = encodeURI(csvContent);
+  if (format === 'excel') {
+    // Create workbook & worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+    
+    // Generate XLSX file
+    XLSX.writeFile(workbook, 'custom_report.xlsx');
+  }
+  else if (format === 'csv') {
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(excelData);
 
-  if (format === 'csv') {
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "custom_report.csv");
-    document.body.appendChild(link);
-    link.click();
-  } else if (format === 'pdf') {
-    alert("PDF export functionality can be implemented using a library like jsPDF.");
-  } else if (format === 'excel') {
-    alert("Excel export functionality can be implemented using a library like xlsx.");
+    // Add column styling
+    worksheet['!cols'] = headers.map(() => ({
+      wch: 20 // Column width
+    }));
+
+    // Freeze header row
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+    
+    // Add filters
+    worksheet['!autofilter'] = { ref: XLSX.utils.encode_range({ 
+      s: { r: 0, c: 0 }, 
+      e: { r: excelData.length, c: headers.length } 
+    }) };
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+    XLSX.writeFile(workbook, 'custom_report.xlsx');
+
   }
 };
 </script>

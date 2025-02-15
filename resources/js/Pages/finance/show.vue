@@ -48,7 +48,7 @@ const switchTab = (tab: string) => {
 
         <div class="flex min-h-screen bg-gray-100 dark:bg-gray-900">
             <Sidebar :activeTab="activeTab" :tabs="tabs" @switch-tab="switchTab" />
-            <main class="flex-1 p-6">
+            <main class="flex-1 p-4">
                 <Dashboard v-if="activeTab === 'Dashboard'" :totalRevenue="totalRevenue" :totalCost="totalCost"
                     :totalProfit="totalProfit" :categories="categories" />
                 <Payroll v-if="activeTab === 'Payroll'" :payrolls="payrolls" />
