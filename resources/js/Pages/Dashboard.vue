@@ -47,6 +47,39 @@
                 </div>
             </div>
 
+
+
+            <div v-if="is('Super Admin')"  class="mb-6 bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                    <h3 class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Financial Indicators by Category</h3>
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        <div
+                            v-for="category in categories"
+                            :key="category.id"
+                            class="bg-gray-50 dark:bg-gray-700 rounded-lg shadow p-6 hover:shadow-xl transition-all duration-300"
+                        >
+                            <h4 class="text-xl font-medium text-gray-800 dark:text-gray-200">{{ category.name }}</h4>
+                            <div class="mt-4 space-y-2">
+                                <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                                    <span>Revenue:</span>
+                                    <span class="font-semibold text-grey-900 dark:text-green-400">{{ category.revenue }}</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                                    <span>Cost:</span>
+                                    <span class="font-semibold text-red-600 dark:text-red-400">{{ category.cost }}</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                                    <span>Profit:</span>
+                                    <span class="font-semibold text-green-600 dark:text-green-400">{{ category.profit }}</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                                    <span>Inventory level:</span>
+                                    <span class="font-semibold text-blue-600 dark:text-blue-400">{{ category.inventory }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+
             <!-- Stats Section -->
             <div v-if="is('Super Admin | Manager')" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-white dark:bg-gray-700 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
@@ -240,6 +273,15 @@ interface Notice {
     title: string;
     description: string;
     date: string;
+}
+
+interface Category {
+    id: number;
+    name: string;
+    revenue: string,
+    cost: string,
+    profit: string,
+    inventory: string
 }
 
 interface Event {
@@ -445,6 +487,7 @@ defineProps({
         type: String,
         default: '0'
     },
+    categories: Array as () => Category[],
 });
 
 

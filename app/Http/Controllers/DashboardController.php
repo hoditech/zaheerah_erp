@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 
 use App\Models\ActivityLog;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\Production;
 use App\Models\Sale;
@@ -43,16 +44,53 @@ class DashboardController extends Controller
             // Non-admin: Fetch only the user's own logs
             $logsQuery = $user->activityLogs()->latest()->with('user')->take(200);
         }
-        
+
         $logs = $logsQuery->get()->map(function ($log) {
             return [
-                'id'          => $log->id,
-                'action'      => $log->action,
+                'id' => $log->id,
+                'action' => $log->action,
                 'description' => $log->description,
-                'created_at'  => $log->created_at,
-                'user_name'   => $log->user ? $log->user->name : 'Unknown',
+                'created_at' => $log->created_at,
+                'user_name' => $log->user ? $log->user->name : 'Unknown',
             ];
         });
+
+        //categories
+        $categories = Category::with(['products.saleItems', 'products.productions'])
+            ->get()
+            ->map(function ($category) {
+                // Calculate total revenue from sales
+                $categoryRevenue = $category->products->sum(function ($product) {
+                    return $product->saleItems->sum(function ($saleItem) {
+                        return $saleItem->price * $saleItem->quantity;
+                    });
+                });
+
+                // Estimate production cost (if required)
+                $categoryCost = $category->products->sum(function ($product) {
+                    return $product->productions->sum(function ($production) {
+                        return ($production->material_cost + $production->labor_cost + $production->overhead_cost) ?: 0;
+                    });
+                });
+
+
+                $totalStock = $category->products->sum('stock');
+
+
+
+                // Calculate profit
+                $categoryProfit = $categoryRevenue - $categoryCost;
+
+                // Return mapped category data
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'revenue' => '₦' . number_format($categoryRevenue, 2),
+                    'cost' => '₦' . number_format($categoryCost, 2),
+                    'profit' => '₦' . number_format($categoryProfit, 2),
+                    'inventory' => number_format($totalStock, 0) . ' items',
+                ];
+            });
 
         return inertia('Dashboard', [
             'usersCount' => $usersCount,
@@ -62,6 +100,7 @@ class DashboardController extends Controller
             'totalRevenue' => '₦' . number_format($totalRevenue, 2),
             'totalProfit' => '₦' . number_format($totalProfit, 2),
             'totalCost' => '₦' . number_format($totalCost, 2),
+            'categories' => $categories,
         ]);
     }
 }

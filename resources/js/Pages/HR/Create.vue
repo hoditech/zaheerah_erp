@@ -102,7 +102,7 @@ const submitForm = () => {
                 <div>
                   <label for="password"
                     class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                  <input v-model="form.password" type="password" id="password"
+                  <input v-model="form.password" type="text" id="password"
                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-indigo-500 dark:focus:border-indigo-500"
                     required />
                 </div>
@@ -111,7 +111,7 @@ const submitForm = () => {
                 <div>
                   <label for="password_confirmation"
                     class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm Password</label>
-                  <input v-model="form.password_confirmation" type="password" id="password_confirmation"
+                  <input v-model="form.password_confirmation" type="text" id="password_confirmation"
                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-indigo-500 dark:focus:border-indigo-500"
                     required />
                 </div>

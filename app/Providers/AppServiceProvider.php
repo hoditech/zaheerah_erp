@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
-        Payroll::observe(PayrollObserver::class);
+        //Payroll::observe(PayrollObserver::class);
     }
 
 

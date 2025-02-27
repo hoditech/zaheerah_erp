@@ -7,12 +7,14 @@ import DataTable from '@/Components/DataTable.vue';
 import { can } from 'laravel-permission-to-vuejs'
 
 defineProps({
-  supplies: {
+  suppliers: {
     type: Array as PropType<any[]>,
     required: false,
     default: () => [],
   },
 });
+
+
 
 
 interface Action {
@@ -92,7 +94,7 @@ if (can('manage_suppliers')) {
 
         <DataTable
           :columns="columns"
-          :data="supplies"
+          :data="suppliers"
           :searchQuery="searchQuery"
           :actions="actions"
           :pageSize="5"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { router } from '@inertiajs/vue3'
 import axios from 'axios';
 
@@ -54,6 +54,8 @@ console.log('Products:', props.products); // Debug the prop value
 const cartItems = ref<CartItem[]>([]);
 const selectedCategory = ref("All");
 const searchQuery = ref("");
+const receiptSearch = ref("");
+
 const receiptTotal = ref(0);
 
 const showReceipt = ref(false);
@@ -61,6 +63,7 @@ const receiptItems = ref<ReceiptItem[]>([]);
 // Initialize receiptData with proper typing
 const receiptData = ref<ReceiptData>();
 const isLoading = ref(false);
+const isSearching = ref(false);
 
 // Create category filter options dynamically
 const categories = ["All", ...new Set(props.products.map(product => product.category.name))];
@@ -213,6 +216,30 @@ const printReceipt = () => {
     printWindow.document.close();
 };
 
+const searchReceipt = async () => {
+    if (!receiptSearch.value) return;
+    isSearching.value = true;
+    try {
+        const cleanReceiptNumber = encodeURIComponent(receiptSearch.value.trim());
+        const response = await axios.get(`/pos/receipt/${cleanReceiptNumber}`);
+        
+        if (response.data.success) {
+            // Access the nested receipt_data
+               receiptItems.value = response.data.receipt_data.items;
+        receiptTotal.value = response.data.receipt_data.total_amount;
+            receiptData.value = response.data.receipt_data;
+            console.log('Received receipt data:', receiptData.value);
+            showReceipt.value = true;
+        } else {
+            alert(response.data.message);
+        }
+    } catch (error) {
+        alert("Receipt not found");
+        console.error("Receipt search error:", error);
+    }finally{
+        isSearching.value = false;
+    }
+};
 
 </script>
 
@@ -226,7 +253,18 @@ const printReceipt = () => {
         </template>
 
         <div class="py-6">
+
+            <!-- Search Recieft -->
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <!-- Add this near the POS header section -->
+                <div class="flex items-center gap-4 mb-4">
+                    <input v-model="receiptSearch" type="text" placeholder="Search receipt by number..."
+                        @keyup.enter="searchReceipt" class="w-full p-2 border rounded-lg dark:bg-gray-700">
+                    <button @click="searchReceipt" :disabled="isSearching"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                           {{ isSearching ? 'Searching...' : 'Search' }}
+                    </button>
+                </div>
 
                 <!-- POS Layout -->
                 <div
@@ -328,6 +366,9 @@ const printReceipt = () => {
             class="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
             <!-- Header -->
             <header class="bg-gradient-to-r from-emerald-600 to-cyan-500 px-6 py-4 relative text-center">
+                <div class="mb-2">
+                    <img src="/images/logo2.png" alt="Company Logo" class="mx-auto max-h-12 w-auto">
+                </div>
                 <div class="absolute top-2 right-2 text-white opacity-20">
                     <i class="fas fa-receipt text-3xl"></i>
                 </div>
@@ -350,8 +391,8 @@ const printReceipt = () => {
                                     weekday: 'short',
                                     year: 'numeric',
                                     month: 'short',
-                            day: 'numeric'
-                            })
+                                    day: 'numeric'
+                                })
                             }}
                         </span>
                     </div>

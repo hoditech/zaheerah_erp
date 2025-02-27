@@ -59,6 +59,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/pos/generate-receipt', [PosController::class, 'generateReceipt'])
         ->middleware('permission:generate_sales_reports');
+    Route::get('/pos/receipt/{receiptNumber}', [PosController::class, 'getReceipt'])->name('pos.receipt.show'); 
+
 
     Route::get('employees', [EmployeeController::class, 'index'])
         ->name('employees.index')
@@ -222,6 +224,17 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
 
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::prefix('reports')->group(function () {
+        Route::get('/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
+        Route::get('/products', [ReportController::class, 'productPerformance'])->name('reports.products');
+        Route::get('/categories', [ReportController::class, 'categorySales'])->name('reports.categories');
+        Route::get('/inventory', [ReportController::class, 'inventoryReport'])->name('reports.inventory');
+        Route::get('/expiry', [ReportController::class, 'expiryReport'])->name('reports.expiry');
+        Route::get('/stock-movement', [ReportController::class, 'stockMovement'])->name('reports.stock-movement');
+    });
 });
 
 require __DIR__ . '/auth.php';

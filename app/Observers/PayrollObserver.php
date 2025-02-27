@@ -11,7 +11,7 @@ class PayrollObserver
      */
     public function created(Payroll $payroll): void
     {
-        $payroll->net_salary = $payroll->calculateNetSalary();
+        //$payroll->net_salary = $payroll->calculateNetSalary();
     }
 
     /**
@@ -19,7 +19,7 @@ class PayrollObserver
      */
     public function updated(Payroll $payroll): void
     {
-        $payroll->net_salary = $payroll->calculateNetSalary();
+        //$payroll->net_salary = $payroll->calculateNetSalary();
     }
 
     /**

@@ -17,7 +17,7 @@ class Product extends Model
         'stock_receive',
         'stock_release',
         'remaining_units',
-        //'supplier_id',
+        'supplier_id',
         'exp_date',
         'batch_number',
         'storage_location',

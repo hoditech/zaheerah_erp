@@ -8,6 +8,11 @@
             :payroll="editedPayroll!"
             :key="editedPayroll?.id" 
         />
+        <ViewPayrollModal 
+            v-if="isViewModalOpen" 
+            @close="closeModals" 
+            :payroll="viewedPayroll!"
+        />
 
         <!-- Success message -->
         <div v-if="successMessage" class="bg-green-500 text-white p-4 rounded-lg mb-4">
@@ -32,6 +37,7 @@
                 <table class="w-full border-collapse min-w-[1000px]">
                     <thead>
                         <tr class="bg-gray-200 dark:bg-gray-700">
+                            <th class="py-3 px-4 text-left sticky top-0 bg-gray-200 dark:bg-gray-700 z-10">Employee ID</th>
                             <th class="py-3 px-4 text-left sticky top-0 bg-gray-200 dark:bg-gray-700 z-10">Employee</th>
                             <th class="py-3 px-4 text-left sticky top-0 bg-gray-200 dark:bg-gray-700 z-10">Base Salary</th>
                             <th class="py-3 px-4 text-left sticky top-0 bg-gray-200 dark:bg-gray-700 z-10">Gross Salary</th>
@@ -46,6 +52,7 @@
                     <tbody>
                         <tr v-for="payroll in filteredPayrolls" :key="payroll.id"
                             class="border-t border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <td class="py-3 px-4">{{ payroll.user.employee_id }}</td>
                             <td class="py-3 px-4">{{ payroll.user.name }}</td>
                             <td class="py-3 px-4">₦{{ formatNumber(payroll.base_salary) }}</td>
                             <td class="py-3 px-4">₦{{ formatNumber(payroll.gross_salary) }}</td>
@@ -66,6 +73,10 @@
                                 <button @click="confirmDelete(payroll)"
                                     class="px-2 py-1 bg-red-500 text-sm text-white rounded-md hover:bg-red-600 transition">
                                     Delete
+                                </button>
+                                <button @click="openViewModal(payroll)"
+                                    class="px-2 py-1 bg-blue-500 text-sm z-50 text-white rounded-md hover:bg-blue-600 transition">
+                                    View
                                 </button>
                             </td>
                         </tr>
@@ -90,15 +101,13 @@
 import { ref, computed, onMounted } from 'vue';
 import PayrollFormModal from './PayrollFormModal.vue';
 import UpdateModal from './UpdateModal.vue';
+import ViewPayrollModal from './ViewPayrollModal.vue';
 import { fetchPayrolls, deletePayroll } from '@/Pages/Services/payrollService';
 
-
-
-
- // In index.vue (parent)
+// In index.vue (parent)
 interface Payroll {
     id: number;
-    user: { name: string };
+    user: { name: string,employee_id: string };
     base_salary: number;
     gross_salary: number;
     total_deduction: number;
@@ -129,15 +138,15 @@ interface Payroll {
     salary_advance: number;
 }
 
-
-
 const payrolls = ref<Payroll[]>([]);
 const loading = ref(false);
 const payrollFilter = ref('All');
 const payrollFilters = ['All', 'Paid', 'Pending'];
 const isCreateModalOpen = ref(false);
 const isEditModalOpen = ref(false);
+const isViewModalOpen = ref(false);
 const editedPayroll = ref<Payroll | null>(null);
+const viewedPayroll = ref<Payroll | null>(null);
 
 const successMessage = ref('');
 const editPayroll = ref<Payroll | null>(null);
@@ -161,10 +170,10 @@ const handlePayrollUpdate = () => {
 const closeModals = () => {
   isCreateModalOpen.value = false;
   isEditModalOpen.value = false;
+  isViewModalOpen.value = false;
   editedPayroll.value = null;
+  viewedPayroll.value = null;
 };
-
-
 
 const filteredPayrolls = computed(() => {
     if (payrollFilter.value === 'All') return payrolls.value;
@@ -191,11 +200,14 @@ const loadPayrolls = async () => {
     }
 };
 
-
-
 const openEditModal = (payroll: Payroll) => {
   editedPayroll.value = { ...payroll }; // Clone the object
   isEditModalOpen.value = true;
+};
+
+const openViewModal = (payroll: Payroll) => {
+  viewedPayroll.value = { ...payroll }; // Clone the object
+  isViewModalOpen.value = true;
 };
 
 const confirmDelete = async (payroll: Payroll) => {

@@ -80,7 +80,7 @@ class User extends Authenticatable
 
         if ($lastUser) {
             // Extract the last number and increment it
-            $lastNumber = (int) substr($lastUser->user_code, -3);
+            $lastNumber = (int) substr($lastUser->employee_id, -3);
             $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
         } else {
             $newNumber = '001';

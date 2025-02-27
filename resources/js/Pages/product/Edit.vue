@@ -52,6 +52,8 @@ const props = defineProps({
   },
 });
 
+console.log([props.suppliers, props.product]);
+
 // Initialize form with existing product data
 const form = useForm({
   name: props.product.name,

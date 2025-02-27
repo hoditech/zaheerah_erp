@@ -15,6 +15,7 @@ class SupplierController extends Controller
     public function index()
     {
         $suppliers = Supplier::with('category')->get();
+        
         return Inertia('procurement/Suppliers/Index', compact('suppliers'));
     }
 

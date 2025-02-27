@@ -52,13 +52,13 @@ const submitForm = () => {
                   
                                 <div>
                                     <label for="category"
-                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300">Product</label>
                                     <select v-model="form.product_id" id="category"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:focus:ring-green-500 dark:focus:border-green-500"
                                         required>
                                         <option value="" disabled>Select a Product</option>
-                                        <option v-for="category in products" :key="category.id" :value="category.id">
-                                            {{ category.name }}
+                                        <option v-for="product in products" :key="-product.id" :value="product.id">
+                                            {{ product.name }}
                                         </option>
                                     </select>
                                 </div>

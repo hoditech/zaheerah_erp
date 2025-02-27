@@ -13,23 +13,23 @@ class ProductionController extends Controller
      * Display a listing of production batches.
      */
     public function index()
-{
-    // Get the current user's category_id
-    $categoryId = auth()->user()->category_id;
+    {
+        // Get the current user's category_id
+        $categoryId = auth()->user()->category_id;
 
-    // Fetch production batches based on the user's category_id
-    $batches = Production::with('product')
-        ->when($categoryId != 1, function ($query) use ($categoryId) {
-            // Filter production batches by products that belong to the user's category
-            $query->whereHas('product', function ($productQuery) use ($categoryId) {
-                $productQuery->where('category_id', $categoryId);
-            });
-        })
-        ->latest()
-        ->get();
+        // Fetch production batches based on the user's category_id
+        $batches = Production::with('product')
+            ->when($categoryId != 1, function ($query) use ($categoryId) {
+                // Filter production batches by products that belong to the user's category
+                $query->whereHas('product', function ($productQuery) use ($categoryId) {
+                    $productQuery->where('category_id', $categoryId);
+                });
+            })
+            ->latest()
+            ->get();
 
-    return inertia('ProductionBatches/Index', compact('batches'));
-}
+        return inertia('ProductionBatches/Index', compact('batches'));
+    }
 
     /**
      * Show the form for creating a new batch.
@@ -93,16 +93,14 @@ class ProductionController extends Controller
 
         $categoryId = auth()->user()->category_id;
 
-        $product = Product::when($categoryId != 1, function ($query) use ($categoryId) {
+        $products = Product::when($categoryId != 1, function ($query) use ($categoryId) {
             // Filter by category_id if it is not 1
             $query->where('category_id', $categoryId);
         })
             ->get();
-
-
         return Inertia::render('ProductionBatches/Edit', [
             'production' => $production,
-            'product' => $product,
+            'products' => $products,
         ]);
     }
 

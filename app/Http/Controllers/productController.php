@@ -13,14 +13,14 @@ class productController extends Controller
     public function index()
     {
         $categoryId = auth()->user()->category_id;
-        $products = Product::with('category')
+        $products = Product::with('category', 'supplier')
             ->when($categoryId != 1, function ($query) use ($categoryId) {
                 // Filter by category_id if it is not 1
                 $query->where('category_id', $categoryId);
             })
             ->get();
 
-        //dd($products);
+       // dd($products);
         // Debugbar::info($products);
 
         return Inertia::render('product/ProductPage', props: [
@@ -68,29 +68,30 @@ class productController extends Controller
             'category_id' => 'required|exists:categories,id',
         ]);
 
-        //dd($validated);
+       // dd($validated);
 
         try {
             $product = Product::create($validated);
-
+ //dd($validated);
             log_activity('Product Created', 'Created product: ' . $product->name);
 
-
+           // dd($validated);
             // Flash success message
             return redirect()->route('products')->with('success', 'Product created successfully.');
         } catch (\Exception $e) {
-            // dd($e);
+             //dd($e);
             return back()->withErrors(['error' => 'Failed to create product. Please try again.']);
         }
     }
 
     public function edit(Product $product)
     {
-        //dd($product);
+        $suppliers = Supplier::all();
         $categories = Category::all();
         return Inertia::render('product/Edit', [
             'product' => $product,
-            'categories' => $categories
+            'categories' => $categories,
+            'suppliers' => $suppliers
         ]);
 
     }
@@ -113,7 +114,7 @@ class productController extends Controller
             'storage_location' => 'nullable|string|max:255',
             'category_id' => 'required|exists:categories,id',
         ]);
-
+//dd($validated);
         try {
             // Update the product
             $product->update($validated);

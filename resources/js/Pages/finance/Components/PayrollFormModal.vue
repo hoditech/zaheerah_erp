@@ -24,7 +24,7 @@
                     <!-- Salary Information -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Base Salary</label>
-                        <input v-model="form.base_salary" type="number" required
+                        <input v-model.number="form.base_salary" type="number" required
                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm"/>
                     </div>
                     
@@ -34,7 +34,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div v-for="field in allowanceFields" :key="field.key">
                                 <label class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
-                                <input v-model="form[field.key as keyof FormData]" :type="field.type" :required="field.required"
+                                <input v-model.number="form[field.key as keyof FormData]" :type="field.type" :required="field.required"
                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm"/>
                             </div>
                         </div>
@@ -46,7 +46,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div v-for="field in deductionFields" :key="field.key">
                                 <label class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
-                                <input v-model="form[field.key as keyof FormData]" :type="field.type" :required="field.required"
+                                <input v-model.number="form[field.key as keyof FormData]" :type="field.type" :required="field.required"
                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm"/>
                             </div>
                         </div>
@@ -95,7 +95,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Account Number</label>
-                                <input v-model="form.account_number" type="number" required
+                                <input v-model="form.account_number" type="text" required
                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm"/>
                             </div>
                         </div>
@@ -141,31 +141,30 @@ interface SalaryField {
 
 interface FormData {
     user_id: string;
-    base_salary: string;
-    overtime_pay: string;
-    bonuses: string;
-    deductions: string;
-    tax: string;
-    commission: string;
+    base_salary: number;
+    overtime_pay: number;
+    bonuses: number;
+    deductions: number;
+    tax: number;
+    commission: number;
     payment_method: string;
     payment_status: string;
     payment_date: string;
-    // New fields
     location: string;
     designation: string;
-    working_days: string;
+    working_days: number;
     bank: string;
     account_number: string;
-    transport: string;
-    house_rent: string;
-    medicals: string;
-    others: string;
-    income_tax: string;
-    cra: string;
-    pension: string;
-    nhf: string;
-    nhis: string;
-    salary_advance: string;
+    transport: number;
+    house_rent: number;
+    medicals: number;
+    others: number;
+    income_tax: number;
+    cra: number;
+    pension: number;
+    nhf: number;
+    nhis: number;
+    salary_advance: number;
 }
 
 const emit = defineEmits(['submit', 'close']);
@@ -177,31 +176,30 @@ const validationErrors = ref<Record<string, string[]>>({});
 
 const defaultForm: FormData = {
     user_id: '',
-    base_salary: '',
-    overtime_pay: '',
-    bonuses: '',
-    deductions: '',
-    tax: '',
-    commission: '',
+    base_salary: 0,
+    overtime_pay: 0,
+    bonuses: 0,
+    deductions: 0,
+    tax: 0,
+    commission: 0,
     payment_method: 'Bank Transfer',
     payment_status: 'Pending',
     payment_date: '',
-    // Initialize new fields
     location: '',
     designation: '',
-    working_days: '',
+    working_days: 0,
     bank: '',
     account_number: '',
-    transport: '',
-    house_rent: '',
-    medicals: '',
-    others: '',
-    income_tax: '',
-    cra: '',
-    pension: '',
-    nhf: '',
-    nhis: '',
-    salary_advance: '',
+    transport: 0,
+    house_rent: 0,
+    medicals: 0,
+    others: 0,
+    income_tax: 0,
+    cra: 0,
+    pension: 0,
+    nhf: 0,
+    nhis: 0,
+    salary_advance: 0,
 };
 
 const form = ref<FormData>({ ...defaultForm });
@@ -261,6 +259,8 @@ const submitForm = async () => {
         if (error.response && error.response.data && error.response.data.errors) {
             // Store validation errors
             validationErrors.value = error.response.data.errors;
+            console.log(error.response.data.errors);
+            
         } else {
             console.error('Failed to submit payroll:', error);
         }
