@@ -31,10 +31,8 @@ const columns = [
     { label: "Category", key: "category.name" },
     { label: "Price", key: "price" },
     { label: "Stock", key: "stock" },
-    { label: "Weight", key: "weight" },
-    { label: "Weight per Unit", key: "weight_per_unit" },
-    { label: "Total Cost", key: "total_cost" },
-    { label: "Remaining units", key: "stock" },
+    { label: "Weight", key: "weight_per_unit" },
+    { label: "Unit Cost", key: "unit_cost" },
     { label: "Supplier", key: "supplier.name" },  // Assuming the supplier relationship is loaded
     { label: "Expiration Date", key: "exp_date" },
     { label: "Batch Number", key: "batch_number" },

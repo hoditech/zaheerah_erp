@@ -28,6 +28,13 @@ interface ReceiptItem {
     price: number;
 }
 
+interface SaleHistoryItem {
+    receipt_number: string;
+    date: string;
+    total_amount: number;
+    items_count: number;
+}
+
 interface ReceiptData {
     receipt_number: string;
     transaction_id: string;
@@ -64,6 +71,10 @@ const receiptItems = ref<ReceiptItem[]>([]);
 const receiptData = ref<ReceiptData>();
 const isLoading = ref(false);
 const isSearching = ref(false);
+
+const saleHistory = ref<SaleHistoryItem[]>([]);
+const showHistory = ref(false);
+const isHistoryLoading = ref(false);
 
 // Create category filter options dynamically
 const categories = ["All", ...new Set(props.products.map(product => product.category.name))];
@@ -222,11 +233,11 @@ const searchReceipt = async () => {
     try {
         const cleanReceiptNumber = encodeURIComponent(receiptSearch.value.trim());
         const response = await axios.get(`/pos/receipt/${cleanReceiptNumber}`);
-        
+
         if (response.data.success) {
             // Access the nested receipt_data
-               receiptItems.value = response.data.receipt_data.items;
-        receiptTotal.value = response.data.receipt_data.total_amount;
+            receiptItems.value = response.data.receipt_data.items;
+            receiptTotal.value = response.data.receipt_data.total_amount;
             receiptData.value = response.data.receipt_data;
             console.log('Received receipt data:', receiptData.value);
             showReceipt.value = true;
@@ -236,8 +247,22 @@ const searchReceipt = async () => {
     } catch (error) {
         alert("Receipt not found");
         console.error("Receipt search error:", error);
-    }finally{
+    } finally {
         isSearching.value = false;
+    }
+};
+
+const fetchSaleHistory = async () => {
+    try {
+        isHistoryLoading.value = true;
+        const response = await axios.get('/pos/sale-history');
+        saleHistory.value = response.data;
+        showHistory.value = true;
+    } catch (error) {
+        console.error("Failed to fetch sale history:", error);
+        alert("Failed to load sale history");
+    } finally {
+        isHistoryLoading.value = false;
     }
 };
 
@@ -262,9 +287,15 @@ const searchReceipt = async () => {
                         @keyup.enter="searchReceipt" class="w-full p-2 border rounded-lg dark:bg-gray-700">
                     <button @click="searchReceipt" :disabled="isSearching"
                         class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                           {{ isSearching ? 'Searching...' : 'Search' }}
+                        {{ isSearching ? 'Searching...' : 'Search' }}
+                    </button>
+                    <button @click="fetchSaleHistory" :disabled="isHistoryLoading"
+                        class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600">
+                        {{ isHistoryLoading ? 'Loading...' : 'History' }}
                     </button>
                 </div>
+
+
 
                 <!-- POS Layout -->
                 <div
@@ -464,6 +495,58 @@ const searchReceipt = async () => {
                     class="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-gray-700 text-xs rounded transition duration-200">
                     Close
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales History Modal -->
+    <div v-if="showHistory" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-2">
+        <div
+            class="w-full max-w-2xl bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:bg-gray-800">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Sales History</h2>
+                    <button @click="showHistory = false" class="text-gray-500 hover:text-gray-700">
+                        ✕
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-left border-b">
+                                <th class="pb-2">Receipt #</th>
+                                <th class="pb-2">Date</th>
+                                <th class="pb-2 text-right">Items</th>
+                                <th class="pb-2 text-right">Total</th>
+                                <th class="pb-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="sale in saleHistory" :key="sale.receipt_number" class="border-b">
+                                <td class="py-2">{{ sale.receipt_number }}</td>
+                                <td class="py-2">
+                                    {{ new Date(sale.date).toLocaleDateString() }}
+                                </td>
+                                <td class="py-2 text-right">{{ sale.items_count }}</td>
+                                <td class="py-2 text-right">₦{{ sale.total_amount.toFixed(2) }}</td>
+                                <td class="py-2">
+                                <td class="py-2, px-3">
+                                    <button
+                                        @click="receiptSearch = sale.receipt_number; showHistory = false; searchReceipt()"
+                                        class="text-blue-500 hover:text-blue-700">
+                                        View
+                                    </button>
+                                </td>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 text-center" v-if="!saleHistory.length">
+                    <p class="text-gray-500">No sales history found</p>
+                </div>
             </div>
         </div>
     </div>

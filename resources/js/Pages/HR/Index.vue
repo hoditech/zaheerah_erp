@@ -4,18 +4,16 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, PropType, ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 // @ts-ignore
-import { is, can } from 'laravel-permission-to-vuejs'
-
+import { is, can } from 'laravel-permission-to-vuejs';
+import * as XLSX from 'xlsx';
 
 const props = defineProps({
   employees: {
-    type: Array  as PropType<any[]>,
-      required: false,
-      default: () => [],
+    type: Array as PropType<any[]>,
+    required: false,
+    default: () => [],
   }
 });
-
-
 
 interface Action {
   label: string;
@@ -23,11 +21,12 @@ interface Action {
   class: string;
 }
 
-
-const formattedEmployees = props.employees.map((employee) => ({
-  ...employee,
-  roles: employee.roles.map((role: { name: string }) => role.name).join(', '),
-}));
+const formattedEmployees = computed(() => 
+  props.employees.map((employee) => ({
+    ...employee,
+    roles: employee.roles.map((role: { name: string }) => role.name).join(', '),
+  }))
+);
 
 const columns = [
   { label: "ID", key: "employee_id" },
@@ -37,8 +36,6 @@ const columns = [
   { label: "Roles", key: "roles" },
   { label: "Category", key: "category.name" },
 ];
-
-
 
 const searchQuery = ref("");
 
@@ -54,8 +51,30 @@ const deleteEmployee = (employee: any) => {
 };
 
 const editEmployee = (employee: any) => {
-  // Redirect to edit page using Inertia
   router.visit(route('employees.edit', employee.id));
+};
+
+// Excel Export Functionality
+const exportToExcel = () => {
+  // Create worksheet data with proper headers
+  const worksheetData = formattedEmployees.value.map(employee => 
+    columns.reduce((acc: any, col) => {
+      acc[col.label] = getNestedValue(employee, col.key);
+      return acc;
+    }, {})
+  );
+
+  // Create worksheet and workbook
+  const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
+
+  // Export the file
+  XLSX.writeFile(workbook, 'employees.xlsx', { compression: true });
+};
+
+const getNestedValue = (obj: any, path: string) => {
+  return path.split('.').reduce((acc, part) => (acc && acc[part] != null ? acc[part] : ''), obj);
 };
 
 let actions: Action[] = [];
@@ -87,7 +106,8 @@ if (is('Super Admin')) {
         <div v-if="$page.props.flash.success" class="bg-green-100 text-green-700 px-4 py-2 rounded mb-4">
             {{ $page.props.flash.success }}
         </div>
-        <!-- Header with Search Bar and Add Employee Button -->
+        
+        <!-- Header Section -->
         <div class="flex justify-between items-center mb-6">
           <div class="relative w-1/3">
             <input
@@ -97,12 +117,22 @@ if (is('Super Admin')) {
               class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
             />
           </div>
-          <button v-if="is('Super Admin | HR')"
-            @click="$inertia.visit(route('employees.create'))"
-            class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out"
-          >
-            Add Employee
-          </button>
+          <div class="flex gap-2">
+            <button
+              v-if="is('Super Admin | HR')"
+              @click="exportToExcel"
+              class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out"
+            >
+              Export to Excel
+            </button>
+            <button
+              v-if="is('Super Admin | HR')"
+              @click="$inertia.visit(route('employees.create'))"
+              class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-md transition duration-300 ease-in-out"
+            >
+              Add Employee
+            </button>
+          </div>
         </div>
 
         <!-- DataTable Component -->

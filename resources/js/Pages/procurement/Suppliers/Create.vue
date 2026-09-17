@@ -36,12 +36,12 @@ const submitForm = () => {
 
 <template>
 
-    <Head title="Add Supply" />
+    <Head title="Add Supplier" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                Add New Supply
+                Add New Supplier
             </h2>
         </template>
 

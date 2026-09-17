@@ -19,8 +19,9 @@ class EmployeeController extends Controller
         $userCategoryId = auth()->user()->category_id;
 
         $employees = User::with(['category', 'roles'])
-            ->where('id', '!=', 1)
+            ->whereNotIn('employee_id', ['ZVL/2025/HR/SS/001', 'ZVL/2025/HR/SS/002'])
             ->get();
+
 
         return Inertia::render('HR/Index', [
             'employees' => $employees,
@@ -63,7 +64,7 @@ class EmployeeController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             //dd($e->errors()); // Display validation errors
         }
-        
+
         $validated['password'] = bcrypt($validated['password']);
 
         $role = Role::find($validated['role_id']);
@@ -75,7 +76,7 @@ class EmployeeController extends Controller
             'category_id' => $validated['category_id'],
             'password' => $validated['password'],
             'can_login' => $validated['can_login'],
-            'employee_id'=> User::generateUserCode(),
+            'employee_id' => User::generateUserCode(),
         ]);
 
         $user->assignRole($role);

@@ -60,10 +60,10 @@
         class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
         Export as CSV
       </button>
-      <button @click="exportReports('excel')"
+      <!-- <button @click="exportReports('excel')"
         class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">
         Export as Excel
-      </button>
+      </button> -->
     </div>
 
     <!-- Preview Table -->

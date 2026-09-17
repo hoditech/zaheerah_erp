@@ -16,6 +16,7 @@
                         <th class="py-3 px-4 text-left">Cost</th>
                         <th class="py-3 px-4 text-left">Profit</th>
                         <th class="py-3 px-4 text-left">Inventory</th>
+                        <th class="py-3 px-4 text-left">stock Value</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -25,7 +26,8 @@
                         <td class="py-3 px-4">{{ category.revenue }}</td>
                         <td class="py-3 px-4">{{ category.cost }}</td>
                         <td class="py-3 px-4">{{ category.profit }}</td>
-                        <td class="py-3 px-4">{{ category.inventory }}</td>
+                        <td class="py-3 px-4">{{ category.totalStock }}</td>
+                        <td class="py-3 px-4">{{ category.stockValue }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -35,14 +37,14 @@
 
 <script setup lang="ts">
 import SummaryCard from './SummaryCard.vue';
-
+ 
 import { PropType } from 'vue';
 
 defineProps({
     totalRevenue: String,
     totalCost: String,
     totalProfit: String,
-    categories: Array as PropType<{ id: number; name: string; revenue: number; cost: number; profit: number; inventory: number; }[]>,
+    categories: Array as PropType<{ id: number; name: string; revenue: number; cost: number; profit: number; totalStock: number; stockValue: number; }[]>,
 });
 
 </script>

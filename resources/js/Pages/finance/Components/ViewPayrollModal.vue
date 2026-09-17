@@ -2,10 +2,16 @@
     <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-4xl h-[80vh] overflow-y-auto">
             <div class="mt-6 flex justify-end">
-                <button @click="close" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">Close</button>
+                <button @click="printPayroll"
+                    class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
+                    Print
+                </button>
+                <button @click="close"
+                    class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">Close</button>
+
             </div>
             <h2 class="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Payroll Details</h2>
-            
+
             <div class="grid grid-cols-2 gap-6">
                 <!-- Employee Information -->
                 <div class="border-b pb-4">
@@ -18,7 +24,7 @@
                         <div><strong>Working Days:</strong> {{ payroll.working_days }}</div>
                     </div>
                 </div>
-                
+
                 <!-- Salary Information -->
                 <div class="border-b pb-4">
                     <h3 class="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">Salary Information</h3>
@@ -29,22 +35,24 @@
                         <div><strong>Total Deduction:</strong> ₦{{ formatNumber(payroll.total_deduction) }}</div>
                     </div>
                 </div>
-                
+
                 <!-- Payment Information -->
                 <div class="border-b pb-4">
                     <h3 class="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">Payment Details</h3>
                     <div class="grid grid-cols-2 gap-4 text-gray-700 dark:text-gray-300">
                         <div><strong>Method:</strong> {{ payroll.payment_method.replace('_', ' ') }}</div>
                         <div><strong>Date:</strong> {{ formatDate(payroll.payment_date) }}</div>
-                        <div><strong>Status:</strong> <span :class="statusClasses(payroll.payment_status)">{{ payroll.payment_status }}</span></div>
+                        <div><strong>Status:</strong> <span :class="statusClasses(payroll.payment_status)">{{
+                            payroll.payment_status }}</span></div>
                     </div>
                 </div>
-                
+
                 <!-- Earnings & Deductions -->
                 <div class="grid grid-cols-2 gap-6">
                     <div>
                         <h3 class="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">Earnings</h3>
-                        <div class="text-gray-700 dark:text-gray-300"><strong>Overtime Pay:</strong> ₦{{ formatNumber(payroll.overtime_pay) }}</div>
+                        <div class="text-gray-700 dark:text-gray-300"><strong>Overtime Pay:</strong> ₦{{
+                            formatNumber(payroll.overtime_pay) }}</div>
                         <div><strong>Bonuses:</strong> ₦{{ formatNumber(payroll.bonuses) }}</div>
                         <div><strong>Commission:</strong> ₦{{ formatNumber(payroll.commission) }}</div>
                         <div><strong>Allowances:</strong></div>
@@ -55,10 +63,11 @@
                             <li>Others: ₦{{ formatNumber(payroll.others) }}</li>
                         </ul>
                     </div>
-                    
+
                     <div>
                         <h3 class="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">Deductions</h3>
-                        <div class="text-gray-700 dark:text-gray-300"><strong>Tax:</strong> ₦{{ formatNumber(payroll.tax) }}</div>
+                        <div class="text-gray-700 dark:text-gray-300"><strong>Tax:</strong> ₦{{
+                            formatNumber(payroll.tax) }}</div>
                         <div><strong>Income Tax:</strong> ₦{{ formatNumber(payroll.income_tax) }}</div>
                         <div><strong>CRA:</strong> ₦{{ formatNumber(payroll.cra) }}</div>
                         <div><strong>Pension:</strong> ₦{{ formatNumber(payroll.pension) }}</div>
@@ -67,7 +76,7 @@
                         <div><strong>Salary Advance:</strong> ₦{{ formatNumber(payroll.salary_advance) }}</div>
                     </div>
                 </div>
-                
+
                 <!-- Bank Details -->
                 <div>
                     <h3 class="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">Bank Details</h3>
@@ -77,8 +86,8 @@
                     </div>
                 </div>
             </div>
-            
-           
+
+
         </div>
     </div>
 </template>
@@ -127,4 +136,92 @@ const statusClasses = (status: string) => ({
     'text-red-500': status === 'failed'
 });
 const close = () => emit('close');
+
+const printPayroll = () => {
+    const content = `
+    <html>
+        <head>
+            <title>Payroll Slip - ${props.payroll.user.name}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                .payroll-slip { max-width: 800px; margin: 0 auto; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .section { margin-bottom: 25px; }
+                .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+                .border-bottom { border-bottom: 1px solid #ddd; padding-bottom: 15px; }
+                .text-bold { font-weight: 600; }
+                .status-paid { color: #22c55e; }
+                .status-pending { color: #eab308; }
+                .status-failed { color: #ef4444; }
+                .logo { max-width: 150px; margin: 0 auto 15px; }
+
+            </style>
+        </head>
+        <body>
+            <div class="payroll-slip">
+                <div class="header">
+                <img src="/images/logo2.png" alt="Company Logo" class="logo">
+                    <h1>${props.payroll.user.name}'s Payroll Slip</h1>
+                    <p>Generated: ${new Date().toLocaleDateString()}</p>
+                </div>
+
+                <div class="grid-2">
+                    <!-- Employee Info -->
+                    <div class="border-bottom">
+                        <h3>Employee Information</h3>
+                        <p>ID: ${props.payroll.user.employee_id}</p>
+                        <p>Name: ${props.payroll.user.name}</p>
+                        <p>Location: ${props.payroll.location}</p>
+                        <p>Designation: ${props.payroll.designation}</p>
+                    </div>
+
+                    <!-- Payment Info -->
+                    <div class="border-bottom">
+                        <h3>Payment Details</h3>
+                        <p>Status: <span class="status-${props.payroll.payment_status}">
+                            ${props.payroll.payment_status}
+                        </span></p>
+                        <p>Method: ${props.payroll.payment_method.replace('_', ' ')}</p>
+                        <p>Date: ${formatDate(props.payroll.payment_date)}</p>
+                    </div>
+                </div>
+
+                <!-- Full Salary Breakdown -->
+                <div class="grid-2" style="margin-top: 20px;">
+                    <div>
+                        <h3>Earnings</h3>
+                        <p>Base Salary: ₦${formatNumber(props.payroll.base_salary)}</p>
+                        <p>Gross Salary: ₦${formatNumber(props.payroll.gross_salary)}</p>
+                        <p>Overtime: ₦${formatNumber(props.payroll.overtime_pay)}</p>
+                        <p>Bonuses: ₦${formatNumber(props.payroll.bonuses)}</p>
+                        <p>Commission: ₦${formatNumber(props.payroll.commission)}</p>
+                    </div>
+
+                    <div>
+                        <h3>Deductions</h3>
+                        <p>Total Deductions: ₦${formatNumber(props.payroll.total_deduction)}</p>
+                        <p>Tax: ₦${formatNumber(props.payroll.tax)}</p>
+                        <p>Pension: ₦${formatNumber(props.payroll.pension)}</p>
+                        <p>NHIS: ₦${formatNumber(props.payroll.nhis)}</p>
+                    </div>
+                </div>
+
+                <div class="text-bold" style="margin-top: 25px; font-size: 1.2em;">
+                    Net Salary: ₦${formatNumber(props.payroll.net_salary)}
+                </div>
+
+                <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px;">
+                    <p>Bank: ${props.payroll.bank}</p>
+                    <p>Account: ${props.payroll.account_number}</p>
+                </div>
+            </div>
+        </body>
+    </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow?.document.write(content);
+    printWindow?.document.close();
+    printWindow?.print();
+};
 </script>

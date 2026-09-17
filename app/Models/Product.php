@@ -9,17 +9,13 @@ class Product extends Model
     protected $fillable = [
         'name',
         'price',
-        'stock',
-        'category_id',
-        'weight',
+        'unit_cost',      
+        'stock',          
+        'category_id',    
         'weight_per_unit',
-        'total_cost',
-        'stock_receive',
-        'stock_release',
-        'remaining_units',
-        'supplier_id',
-        'exp_date',
-        'batch_number',
+        'supplier_id',    
+        'exp_date',       
+        'batch_number',   
         'storage_location',
     ];
 
@@ -48,5 +44,15 @@ class Product extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function getTotalCostAttribute()
+    {
+        return $this->unit_cost * $this->stock;
+    }
+
+    public function inventoryTransactions()
+    {
+        return $this->hasMany(InventoryTransaction::class);
     }
 }

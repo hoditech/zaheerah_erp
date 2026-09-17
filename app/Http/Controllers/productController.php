@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\InventoryTransaction;
 use App\Models\Product;
 use App\Models\Supplier;
+use DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -54,32 +56,45 @@ class productController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'weight' => 'nullable|numeric|min:0',
-            'weight_per_init' => 'nullable|numeric|min:0',
-            'total_cost' => 'nullable|numeric|min:0',
-            'stock_receive' => 'nullable|integer|min:0',
-            'stock_release' => 'nullable|integer|min:0',
-            'remaining_units' => 'nullable|integer|min:0',
+            'unit_cost' => 'required|numeric|min:0',
+            'initial_stock' => 'required|integer|min:0', // First stock input
+            'category_id' => 'required|exists:categories,id',
+            'weight_per_unit' => 'nullable|numeric|min:0',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'exp_date' => 'nullable|date',
             'batch_number' => 'nullable|string|max:255',
             'storage_location' => 'nullable|string|max:255',
-            'category_id' => 'required|exists:categories,id',
         ]);
-
-       // dd($validated);
-
+    
         try {
-            $product = Product::create($validated);
- //dd($validated);
+            $product = Product::create([
+                'name' => $validated['name'],
+                'price' => $validated['price'],
+                'unit_cost' => $validated['unit_cost'],
+                'stock' => $validated['initial_stock'], // Set initial stock
+                'category_id' => $validated['category_id'],
+                // Optional fields
+                'weight' => $validated['weight'] ?? null,
+                'weight_per_unit' => $validated['weight_per_unit'] ?? null,
+                'supplier_id' => $validated['supplier_id'] ?? null,
+                'exp_date' => $validated['exp_date'] ?? null,
+                'batch_number' => $validated['batch_number'] ?? null,
+                'storage_location' => $validated['storage_location'] ?? null,
+            ]);
+    
+            // Record inventory transaction
+            InventoryTransaction::create([
+                'product_id' => $product->id,
+                'quantity' => $validated['initial_stock'],
+                'unit_cost' => $validated['unit_cost'],
+                'type' => 'initial',
+            ]);
+    
             log_activity('Product Created', 'Created product: ' . $product->name);
-
-           // dd($validated);
-            // Flash success message
+    
             return redirect()->route('products')->with('success', 'Product created successfully.');
         } catch (\Exception $e) {
-             //dd($e);
+            \Log::error("Product Store Error: " . $e->getMessage());
             return back()->withErrors(['error' => 'Failed to create product. Please try again.']);
         }
     }
@@ -101,34 +116,53 @@ class productController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'weight' => 'nullable|numeric|min:0',
-            'weight_per_bag' => 'nullable|numeric|min:0',
-            'total_cost' => 'nullable|numeric|min:0',
-            'stock_receive' => 'nullable|integer|min:0',
-            'stock_release' => 'nullable|integer|min:0',
-            'remaining_bags' => 'nullable|integer|min:0',
+            'unit_cost' => 'required|numeric|min:0',
+            'stock_adjustment' => 'nullable|integer',
+            'category_id' => 'required|exists:categories,id',
+            'weight_per_unit' => 'nullable|numeric|min:0',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'exp_date' => 'nullable|date',
             'batch_number' => 'nullable|string|max:255',
             'storage_location' => 'nullable|string|max:255',
-            'category_id' => 'required|exists:categories,id',
         ]);
-//dd($validated);
+    
         try {
-            // Update the product
-            $product->update($validated);
-
-            // Log activity
+            DB::transaction(function () use ($validated, $product) {
+                // Adjust stock if needed
+                if (isset($validated['stock_adjustment'])) {
+                    $product->stock += $validated['stock_adjustment'];
+    
+                    InventoryTransaction::create([
+                        'product_id' => $product->id,
+                        'quantity' => $validated['stock_adjustment'],
+                        'unit_cost' => $validated['unit_cost'],
+                        'type' => $validated['stock_adjustment'] > 0 ? 'restock' : 'deduction',
+                    ]);
+                }
+    
+                // Update product
+                $product->update([
+                    'name' => $validated['name'],
+                    'price' => $validated['price'],
+                    'unit_cost' => $validated['unit_cost'],
+                    'category_id' => $validated['category_id'],
+                    'weight_per_unit' => $validated['weight_per_unit'] ?? $product->weight_per_unit,
+                    'supplier_id' => $validated['supplier_id'] ?? $product->supplier_id,
+                    'exp_date' => $validated['exp_date'] ?? $product->exp_date,
+                    'batch_number' => $validated['batch_number'] ?? $product->batch_number,
+                    'storage_location' => $validated['storage_location'] ?? $product->storage_location,
+                ]);
+            });
+    
             log_activity('Product Updated', 'Updated product: ' . $product->name);
-
-            // Flash success message
             return redirect()->route('products')->with('success', 'Product updated successfully.');
-        } catch (\Exception $e) {
+    
+        } catch (\Throwable $e) {
+            \Log::error("Product Update Error: " . $e->getMessage());
             return back()->withErrors(['error' => 'Failed to update product. Please try again.']);
         }
     }
-
+    
 
 
     public function destroy(Product $product)

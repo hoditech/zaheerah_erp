@@ -110,8 +110,8 @@ class RolesSeeder extends Seeder
         $employee->syncPermissions(['create_sales', 'view_sales']);
 
         // Manager: Category-specific permissions
-        $categories = ['water', 'soap', 'electronics', 'furniture'];
-        $actions = ['view', 'create', 'edit', 'delete'];
+        $categories = ['water', 'cosmetics', 'agriculture', 'restaurant', 'trade', ];
+        $actions = ['view', 'create', 'edit', 'delete']; 
 
         foreach ($categories as $category) {
             foreach ($actions as $action) {
@@ -125,6 +125,10 @@ class RolesSeeder extends Seeder
         $superAdminUser = User::find(1);
         if ($superAdminUser) {
             $superAdminUser->assignRole($superAdmin);
+        }
+        $superAdminUser2 = User::find(2);
+        if ($superAdminUser2) {
+            $superAdminUser2->assignRole($superAdmin);
         }
 
         echo "Roles and permissions seeded successfully.";

@@ -14,12 +14,14 @@ const props = defineProps<{
     totalProfit: string;
     totalStock: string;
     categories?: {
-        id: number;
+        id: number; 
         name: string;
         revenue: number;
         cost: number;
         profit: number;
         inventory: number;
+        totalStock: number;
+        stockValue: number; 
     }[];
     payrolls?: {
         id: number;

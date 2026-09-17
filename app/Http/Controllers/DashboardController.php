@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Category;
+use App\Models\InventoryTransaction;
 use App\Models\Product;
 use App\Models\Production;
 use App\Models\Sale;
@@ -16,90 +17,79 @@ class DashboardController extends Controller
 {
     public function index()
     {
-
-        // // Retrieve total revenue (total sales)
+        // Total Revenue
         $totalRevenue = Sale::sum('total_amount');
-        // // Retrieve total cost (sum of material cost, labor cost, and overhead cost for all productions)
-        $totalCost = Production::sum(DB::raw('material_cost + labor_cost + overhead_cost'));
-
-        // //dd($totalCost);
-// // Calculate total profit (Revenue - Cost)
+    
+        // Total Costs (Production + Inventory Purchases)
+        $totalProductionCost = Production::sum(DB::raw('material_cost + labor_cost + overhead_cost'));
+        $totalInventoryCost = InventoryTransaction::whereIn('type', ['restock', 'production', 'initial'])
+                            ->sum(DB::raw('quantity * unit_cost'));
+        $totalCost = $totalProductionCost + $totalInventoryCost;
+    
+        // Profit Calculation
         $totalProfit = $totalRevenue - $totalCost;
 
-        // // Retrieve stock levels
-        $totalStock = Product::sum('stock');
-
-
+    
+        // User Metrics (unchanged)
         $usersCount = User::count();
-        $activeUsersCount = User::where('can_login', true)->count(); // Adjust based on your status column
-        $newUsersCount = User::whereDate('created_at', now()->toDateString())->count(); // Users registered today
-
+        $activeUsersCount = User::where('can_login', true)->count();
+        $newUsersCount = User::whereDate('created_at', now()->toDateString())->count();
+    
+        // Activity Logs (unchanged)
         $user = auth()->user();
-
-        if ($user->hasRole('Super Admin')) {
-            // Admin: Fetch the latest 100 logs across all users
-            $logsQuery = ActivityLog::latest()->with('user')->take(300);
-
-        } else {
-            // Non-admin: Fetch only the user's own logs
-            $logsQuery = $user->activityLogs()->latest()->with('user')->take(200);
-        }
-
+        $logsQuery = $user->hasRole('Super Admin') 
+            ? ActivityLog::latest()->with('user')->take(300)
+            : $user->activityLogs()->latest()->with('user')->take(200);
+    
         $logs = $logsQuery->get()->map(function ($log) {
             return [
                 'id' => $log->id,
                 'action' => $log->action,
                 'description' => $log->description,
                 'created_at' => $log->created_at,
-                'user_name' => $log->user ? $log->user->name : 'Unknown',
+                'user_name' => $log->user?->name ?? 'Unknown',
             ];
         });
-
-        //categories
-        $categories = Category::with(['products.saleItems', 'products.productions'])
+    
+        // Categories Breakdown (with accurate costs)
+        $categories = Category::with(['products.saleItems', 'products.productions', 'products.inventoryTransactions'])
             ->get()
             ->map(function ($category) {
-                // Calculate total revenue from sales
                 $categoryRevenue = $category->products->sum(function ($product) {
-                    return $product->saleItems->sum(function ($saleItem) {
-                        return $saleItem->price * $saleItem->quantity;
-                    });
+                    return $product->saleItems->sum(fn($si) => $si->price * $si->quantity);
                 });
-
-                // Estimate production cost (if required)
+    
                 $categoryCost = $category->products->sum(function ($product) {
-                    return $product->productions->sum(function ($production) {
-                        return ($production->material_cost + $production->labor_cost + $production->overhead_cost) ?: 0;
-                    });
+                    $productionCost = $product->productions->sum(fn($p) => $p->material_cost + $p->labor_cost + $p->overhead_cost);
+                    $inventoryCost = $product->inventoryTransactions->sum(fn($t) => $t->quantity * $t->unit_cost);
+                    return $productionCost + $inventoryCost;
                 });
-
-
-                $totalStock = $category->products->sum('stock');
-
-
-
-                // Calculate profit
-                $categoryProfit = $categoryRevenue - $categoryCost;
-
-                // Return mapped category data
+    
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
                     'revenue' => '₦' . number_format($categoryRevenue, 2),
                     'cost' => '₦' . number_format($categoryCost, 2),
-                    'profit' => '₦' . number_format($categoryProfit, 2),
-                    'inventory' => number_format($totalStock, 0) . ' items',
+                    'profit' => '₦' . number_format($categoryRevenue - $categoryCost, 2),
+                    'inventory' => number_format($category->products->sum('stock'), 0) . ' items',
                 ];
             });
-
+    
         return inertia('Dashboard', [
+            // User metrics
             'usersCount' => $usersCount,
             'activeUsersCount' => $activeUsersCount,
             'newUsersCount' => $newUsersCount,
-            'logs' => $logs,
+            
+            // Financial metrics
             'totalRevenue' => '₦' . number_format($totalRevenue, 2),
-            'totalProfit' => '₦' . number_format($totalProfit, 2),
             'totalCost' => '₦' . number_format($totalCost, 2),
+            'totalProfit' => '₦' . number_format($totalProfit, 2),
+            
+            // Activity logs
+            'logs' => $logs,
+            
+            // Categories breakdown
             'categories' => $categories,
         ]);
     }
