@@ -12,6 +12,8 @@
 .env.production
 # Local archive of the project; it contains a .env and must never be committed.
 /storage.zip
+# Compiled assets and their local upload archive; build output is not tracked.
+/public/build.zip
 .phpactor.json
 .phpunit.result.cache
 Homestead.json

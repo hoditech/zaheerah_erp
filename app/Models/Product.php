@@ -12,6 +12,7 @@ class Product extends Model
         'unit_cost',      
         'stock',          
         'category_id',    
+        'image_url',
         'weight_per_unit',
         'supplier_id',    
         'exp_date',       

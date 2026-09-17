@@ -38,6 +38,9 @@ class CatalogController extends Controller
             'stock' => (int) $product->stock,
             'category_id' => $product->category_id,
             'category' => $product->category?->name,
+            // Absolute so the storefront can use it directly. url() leaves an
+            // already-absolute value (an image imported from the shop) alone.
+            'image_url' => $product->image_url ? url($product->image_url) : null,
             'updated_at' => $product->updated_at?->toIso8601String(),
         ]);
 
@@ -65,6 +68,7 @@ class CatalogController extends Controller
             'unit_cost' => 'nullable|numeric|min:0',
             'category' => 'nullable|string|max:255',
             'external_ref' => 'nullable|string|max:255',
+            'image_url' => 'nullable|string|max:2048',
         ]);
 
         $categoryId = null;
@@ -95,6 +99,12 @@ class CatalogController extends Controller
             $product->category_id = $categoryId;
         }
 
+        // Only set the image when one is supplied, so a shop-side sync cannot
+        // wipe an image that was uploaded in the admin.
+        if (! empty($validated['image_url'])) {
+            $product->image_url = $validated['image_url'];
+        }
+
         $product->save();
 
         // Opening stock is only ever logged once, when the product is born.
@@ -116,6 +126,7 @@ class CatalogController extends Controller
                 'price' => (float) $product->price,
                 'stock' => (int) $product->stock,
                 'category' => $product->category?->name,
+                'image_url' => $product->image_url ? url($product->image_url) : null,
                 'created' => $created,
             ],
         ], $created ? 201 : 200);

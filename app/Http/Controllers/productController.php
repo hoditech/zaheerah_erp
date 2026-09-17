@@ -8,10 +8,47 @@ use App\Models\Product;
 use App\Models\Supplier;
 use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class productController extends Controller
 {
+    /**
+     * Validation rules shared by create and edit, including the product image.
+     *
+     * @return array<string, string>
+     */
+    private function imageRules(): array
+    {
+        return [
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ];
+    }
+
+    /**
+     * Store an uploaded product image on the public disk.
+     *
+     * Saves the same shape the storefront uses ("storage/products/x.jpg") so the
+     * shop can take the value straight from the catalogue API. Returns null when
+     * no file was uploaded.
+     */
+    private function storeImage(Request $request): ?string
+    {
+        if (! $request->hasFile('image')) {
+            return null;
+        }
+
+        $file = $request->file('image');
+
+        $filename = time() . '-' . Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))
+            . '.' . $file->getClientOriginalExtension();
+
+        $path = $file->storeAs('products', $filename, 'public');
+
+        return 'storage/' . $path;
+    }
+
     public function index()
     {
         $categoryId = auth()->user()->category_id;
@@ -64,7 +101,7 @@ class productController extends Controller
             'exp_date' => 'nullable|date',
             'batch_number' => 'nullable|string|max:255',
             'storage_location' => 'nullable|string|max:255',
-        ]);
+        ] + $this->imageRules());
     
         try {
             $product = Product::create([
@@ -73,8 +110,8 @@ class productController extends Controller
                 'unit_cost' => $validated['unit_cost'],
                 'stock' => $validated['initial_stock'], // Set initial stock
                 'category_id' => $validated['category_id'],
+                'image_url' => $this->storeImage($request),
                 // Optional fields
-                'weight' => $validated['weight'] ?? null,
                 'weight_per_unit' => $validated['weight_per_unit'] ?? null,
                 'supplier_id' => $validated['supplier_id'] ?? null,
                 'exp_date' => $validated['exp_date'] ?? null,
@@ -124,10 +161,10 @@ class productController extends Controller
             'exp_date' => 'nullable|date',
             'batch_number' => 'nullable|string|max:255',
             'storage_location' => 'nullable|string|max:255',
-        ]);
+        ] + $this->imageRules());
     
         try {
-            DB::transaction(function () use ($validated, $product) {
+            DB::transaction(function () use ($validated, $product, $request) {
                 // Adjust stock if needed
                 if (isset($validated['stock_adjustment'])) {
                     $product->stock += $validated['stock_adjustment'];
@@ -140,12 +177,16 @@ class productController extends Controller
                     ]);
                 }
     
-                // Update product
+                // Update product. The image is only replaced when a new file is
+                // uploaded, otherwise the existing one is kept.
                 $product->update([
                     'name' => $validated['name'],
                     'price' => $validated['price'],
                     'unit_cost' => $validated['unit_cost'],
                     'category_id' => $validated['category_id'],
+                    'image_url' => $request->hasFile('image')
+                        ? $this->storeImage($request)
+                        : $product->image_url,
                     'weight_per_unit' => $validated['weight_per_unit'] ?? $product->weight_per_unit,
                     'supplier_id' => $validated['supplier_id'] ?? $product->supplier_id,
                     'exp_date' => $validated['exp_date'] ?? $product->exp_date,
