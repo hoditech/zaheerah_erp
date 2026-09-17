@@ -41,7 +41,15 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Headers the public storefront sends when it calls the ERP API.
+ *
+ * @return array<string, string>
+ */
+function storefrontHeaders(?string $key = null): array
 {
-    // ..
+    return [
+        'X-Storefront-Key' => $key ?? (string) config('services.storefront.key'),
+        'Accept' => 'application/json',
+    ];
 }

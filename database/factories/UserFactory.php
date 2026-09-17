@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Category;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -29,7 +30,25 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            // users.category_id is NOT NULL with a foreign key, so a category has
+            // to exist before a user can be created at all.
+            'category_id' => fn () => Category::query()->firstOrCreate(
+                ['name' => 'General'],
+                ['description' => 'Users not specific to any category'],
+            )->id,
+            // LoginRequest refuses to authenticate when this is false.
+            'can_login' => true,
         ];
+    }
+
+    /**
+     * A user who is not allowed to sign in.
+     */
+    public function cannotLogin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'can_login' => false,
+        ]);
     }
 
     /**

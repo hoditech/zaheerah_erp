@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -41,8 +42,14 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'phone' => $request->phone,
             'email' => $request->email,
-            'category_id' =>1,
-            'can_login' => $request->can_login,
+            // Resolve the default category by name rather than a magic id.
+            'category_id' => Category::query()->firstOrCreate(
+                ['name' => 'General'],
+                ['description' => 'Users not specific to any category'],
+            )->id,
+            // An unchecked checkbox sends nothing, and can_login is NOT NULL,
+            // so this must be coerced to a real boolean instead of null.
+            'can_login' => $request->boolean('can_login'),
             'password' => Hash::make($request->password),
         ]);
 

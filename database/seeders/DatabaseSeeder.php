@@ -13,16 +13,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
+        // Each seeder must run exactly once. Calling ProductSeeder twice here is
+        // what produced the duplicate product rows in the live catalogue.
         $this->call([
-            StoresSeeder::class,
-            UsersSeeder::class,
+            CategorySeeder::class,
+            RolesSeeder::class,
+            ProductSeeder::class,
+            //UsersSeeder::class,
         ]);
     }
 }

@@ -18,6 +18,20 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Public storefront (Zaheerah frontsite)
+    |--------------------------------------------------------------------------
+    |
+    | Shared secret for the /api/v1/* endpoints the storefront calls. The same
+    | value must be set as ERP_API_KEY on the frontsite application.
+    |
+    */
+
+    'storefront' => [
+        'key' => env('STOREFRONT_API_KEY'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

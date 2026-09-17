@@ -5,6 +5,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\NoticeController;
+use App\Http\Controllers\OnlineLeadController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\productController;
@@ -181,6 +182,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('events', [EventController::class, 'index'])->name('events.index');
     Route::get('events/{event}', [EventController::class, 'show'])->name('events.show');
 
+    // Enquiries that arrived from the public website (quote requests, contact form).
+    Route::get('online-leads', [OnlineLeadController::class, 'index'])->name('online-leads.index');
+    Route::patch('online-leads/{lead}', [OnlineLeadController::class, 'updateStatus'])->name('online-leads.update');
+
     Route::get('/products/{product}/stock', [PosController::class, 'getStock']);
 
 
@@ -191,6 +196,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Routes restricted to Super Admin
 Route::middleware(['auth', 'role:Super Admin'])->group(function () {
     Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+
+    Route::get('/pos/sale-history', [PosController::class, 'saleHistory'])->name('sale-history');
 
     Route::resource('payrolls', PayrollController::class);
     Route::post('payrolls/{payroll}/mark-paid', [PayrollController::class, 'markAsPaid'])->name('payrolls.markPaid');

@@ -56,6 +56,10 @@ class PosController extends Controller
                 $product = Product::findOrFail($item['product_id']);
 
                 if ($product->stock < $item['quantity']) {
+                    // Roll back before returning: bailing out here used to leave
+                    // the transaction open, along with a half-written sale.
+                    DB::rollBack();
+
                     return response()->json([
                         'success' => false,
                         'message' => "Insufficient stock for {$product->name} (Available: {$product->stock})",
@@ -71,13 +75,14 @@ class PosController extends Controller
                     'price' => $item['price'],
                 ]);
 
-                // Log sale creation
+                // Deduct first, so the log reports the stock that is actually left.
+                $product->decrement('stock', $item['quantity']);
+
                 log_activity(
                     'Stock Deduction',
                     "Deducted {$item['quantity']} units of {$product->name}. Remaining stock: {$product->stock}",
                 );
 
-                $product->decrement('stock', $item['quantity']);
                 $saleItems[] = [
                     'name' => $product->name,
                     'quantity' => $item['quantity'],
@@ -161,48 +166,62 @@ class PosController extends Controller
     }
 
     public function getReceipt($receiptNumber)
-{
-    try {
-        $cleanReceiptNumber = urldecode(trim($receiptNumber));
-        
-        $sale = Sale::with('items')
-            ->where('receipt_number', $cleanReceiptNumber)
-            ->firstOrFail();
+    {
+        try {
+            $cleanReceiptNumber = urldecode(trim($receiptNumber));
 
-        // Map items to match makeSale's structure
-        $receiptItems = $sale->items->map(function ($item) {
+            $sale = Sale::with('items')
+                ->where('receipt_number', $cleanReceiptNumber)
+                ->firstOrFail();
+
+            // Map items to match makeSale's structure
+            $receiptItems = $sale->items->map(function ($item) {
+                return [
+                    'product_id' => $item->product_id,
+                    'name' => $item->product_name ?? 'Product Name Not Available',
+                    'quantity' => $item->quantity,
+                    'price' => (float) $item->price
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Receipt retrieved successfully',
+                'receipt_data' => [
+                    'receipt_number' => $sale->receipt_number,
+                    'transaction_id' => $sale->transaction_id,
+                    'date' => $sale->created_at->format('M j, Y H:i:s'),
+                    'payment_method' => $sale->payment_method ?? 'cash',
+                    'items' => $receiptItems,
+                    'total_amount' => (float) $sale->total_amount,
+                    'store_info' => [
+                        'address' => 'No 144 Allasawa Daza Housing Estate Gusau Zamfara State',
+                        'contact' => 'contact@zaheerah.com',
+                        'phone' => '+234 806 2242 794'
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error("Receipt lookup failed: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Receipt not found'
+            ], 404);
+        }
+    }
+
+    public function saleHistory()
+    {
+        $sales = Sale::withCount('items')->latest()->get()->map(function ($sale) {
             return [
-                'product_id' => $item->product_id,
-                'name' => $item->product_name ?? 'Product Name Not Available',
-                'quantity' => $item->quantity,
-                'price' => (float)$item->price
+                'receipt_number' => $sale->receipt_number,
+                'date' => $sale->created_at,
+                'total_amount' => $sale->total_amount,
+                'items_count' => $sale->items_count,
             ];
         });
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Receipt retrieved successfully',
-            'receipt_data' => [
-                'receipt_number' => $sale->receipt_number,
-                'transaction_id' => $sale->transaction_id,
-                'date' => $sale->created_at->format('M j, Y H:i:s'),
-                'payment_method' => $sale->payment_method ?? 'cash',
-                'items' => $receiptItems,
-                'total_amount' => (float)$sale->total_amount,
-                'store_info' => [
-                    'address' => 'No 144 Allasawa Daza Housing Estate Gusau Zamfara State',
-                    'contact' => 'contact@zaheerah.com',
-                    'phone' => '+234 806 2242 794'
-                ]
-            ]
-        ], 200);
-
-    } catch (\Exception $e) {
-        \Log::error("Receipt lookup failed: " . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Receipt not found'
-        ], 404);
+        return response()->json($sales);
     }
-}
 }

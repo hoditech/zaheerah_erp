@@ -10,6 +10,8 @@
 .env
 .env.backup
 .env.production
+# Local archive of the project; it contains a .env and must never be committed.
+/storage.zip
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
