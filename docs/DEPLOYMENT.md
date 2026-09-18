@@ -195,6 +195,12 @@ ERP_SYNC_ENABLED=true
 ERP_STAFF_LOGIN_URL="${ERP_BASE_URL}/login"
 ```
 
+> **Both URLs need their scheme.** `ERP_BASE_URL=erp.zaheerah.com` is not just
+> untidy: cURL assumes plain **http** for a scheme-less URL, so the shared API key
+> would travel unencrypted over port 80. `php artisan erp:check` now refuses to
+> run without a scheme, and warns when it is not https. A scheme-less
+> `ERP_STAFF_LOGIN_URL` makes the footer link resolve relative to the site.
+
 Then on **both** apps, so the cached config picks up the new values:
 
 ```bash
@@ -313,10 +319,13 @@ frontsite (sync off) → verify → ERP → connect → publish + sync + back-fi
 | Symptom | Fix |
 |---|---|
 | Config changes appear ignored | `bootstrap/cache/*.php` is stale. Delete those files and retry. |
+| `ERP_BASE_URL has no scheme` | Add `https://`. Without it cURL silently uses plain http and the API key is sent unencrypted. |
 | `401` from the ERP | Keys differ. Fix both `.env` files, then `php artisan config:cache` on each. |
+| Footer "Staff Login" 404s | `ERP_STAFF_LOGIN_URL` is missing its `https://`, so the link resolves relative to the site. |
 | Shop shows "Out of Stock" everywhere | Expected after `--stock=0`. Enter stock in the ERP, then `php artisan erp:sync-catalog`. |
 | Orders have `erp_push_error` | Run `php artisan erp:push-pending-orders` and read the message. |
 | Products appear twice on the site | A product was linked twice. Check `erp_product_id` uniqueness on `products`. |
+| The sync tries to create products the shop already has | The ERP catalogue shares their names but the shop rows are unlinked. The sync adopts unlinked rows by name, so this means the names differ — compare them in the ERP admin. |
 
 **Rollback:** both apps deploy from a git branch, so `git checkout <previous-commit>`
 plus `composer install` restores the previous code. You do **not** need to roll
