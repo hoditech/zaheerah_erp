@@ -241,11 +241,19 @@ came in during the gap becomes a real ERP sale with its stock deducted.
 > know the opening quantities, pass `--stock=N`. You can also skip step 1
 > entirely and only push the ERP's own products down.
 
-**About images.** Step 1 also copies each product's existing image URL into the
-ERP, so the admin shows the same picture the shop does. From then on, upload
-images on the ERP product form — the shop picks them up on the next sync. A
-product whose image has not been uploaded yet keeps whatever the shop already
-has, so nothing is blanked out in the meantime.
+**About images.** Step 1 also pulls each product's image **file** into the ERP —
+the ERP downloads it and stores its own copy, so the imported products are
+completely inside the ERP and do not depend on the shop still hosting them. If a
+download fails the link is kept and printed as a warning, so the product is still
+created; fix those images on the ERP product form afterwards.
+
+From then on, upload images on the ERP product form — the shop picks them up on
+the next sync. A product whose image has not been uploaded yet keeps whatever the
+shop already has, so nothing is blanked out in the meantime.
+
+> `erp:publish-products` needs the frontsite to be reachable from the ERP server
+> for the image download, and `APP_URL` on the frontsite must be correct or the
+> URLs it sends will point at the wrong host.
 
 ---
 

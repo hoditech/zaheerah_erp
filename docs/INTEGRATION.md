@@ -52,7 +52,7 @@ Products are created and edited **only in the ERP admin**. The shop displays the
 | Data | Owner | How it moves |
 |---|---|---|
 | Product name, price, category, stock | **ERP** | `erp:sync-catalog` pulls it down |
-| Product image | **ERP** | Uploaded on the product form; synced down. An ERP product with no image keeps whatever the site already has |
+| Product image | **ERP** | Uploaded on the product form, or downloaded and stored when a product is imported from the shop. Synced down to the site |
 | Badge, sort order, description, visibility | **Frontsite** | Never overwritten by a sync |
 | Web sales + stock deduction | **ERP** | Paid order pushed from checkout |
 | Quote requests, contact messages | **Frontsite** stores, **ERP** works them | Pushed on submit, visible at `/online-leads` |
@@ -67,9 +67,30 @@ Products are created and edited **only in the ERP admin**. The shop displays the
 The product appears in the shop with its price, live stock and image.
 
 The image field lives on the ERP product (`products.image_url`) and stores either
-`storage/products/<file>` for an upload, or an absolute URL when the product was
-imported from the shop. The catalogue API returns it as an absolute URL, so the
-frontsite stores it exactly as received.
+`storage/products/<file>` for an upload, or an absolute URL when an image could
+not be fetched. The catalogue API returns it as an absolute URL, so the frontsite
+stores it exactly as received.
+
+### Images are owned by the ERP, files included
+
+When a product is imported from the shop (`erp:publish-products`), the ERP does
+not just record a link — it **downloads the image and stores its own copy** on
+its public disk. An imported product is therefore complete inside the ERP and
+does not depend on the shop still hosting the file.
+
+The import is deliberately forgiving, because a missing image should never cost
+you the product:
+
+| Situation | What happens |
+|---|---|
+| Image downloads fine | Stored on the ERP disk; the product points at the ERP's own copy |
+| Download fails or 404s | The original link is kept and reported in `warnings`, so you can see and fix it |
+| The file is not an image | Rejected (checked by content type) and the link is kept |
+| Larger than 2 MB | Kept as a link rather than stored |
+| Already a relative path, or already on the ERP | Stored as-is, no download |
+
+After the import, the ERP's own URL is what syncs back down to the shop, so the
+site then displays images served by the ERP.
 
 > The frontsite's `/admin/products/images` page still exists for products whose
 > images have not been moved into the ERP yet. It is **unauthenticated** — protect

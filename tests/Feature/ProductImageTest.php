@@ -194,21 +194,6 @@ test('the catalogue api returns null when a product has no image', function () {
         ->assertJsonPath('data.0.image_url', null);
 });
 
-test('the catalogue upsert accepts an image url', function () {
-    $this->withHeaders(storefrontHeaders())
-        ->postJson('/api/v1/catalog/products', [
-            'name' => 'Palm Oil',
-            'price' => 60000,
-            'stock' => 4,
-            'category' => 'Trade',
-            'image_url' => 'https://zaheerah.com/storage/products/oil.jpg',
-        ])
-        ->assertCreated();
-
-    expect(Product::where('name', 'Palm Oil')->value('image_url'))
-        ->toBe('https://zaheerah.com/storage/products/oil.jpg');
-});
-
 test('the catalogue upsert does not wipe an existing image', function () {
     Product::create([
         'name' => 'Palm Oil',
@@ -227,4 +212,125 @@ test('the catalogue upsert does not wipe an existing image', function () {
         ->assertOk();
 
     expect(Product::where('name', 'Palm Oil')->value('image_url'))->toBe('storage/products/oil.jpg');
+});
+
+// ---------------------------------------------------------------------------
+// Importing the image itself, not just a link to it
+// ---------------------------------------------------------------------------
+
+test('importing a product downloads the image onto the erp', function () {
+    Http::fake(['zaheerah.com/*' => Http::response(
+        UploadedFile::fake()->image('oil.jpg', 300, 300)->getContent(),
+        200,
+        ['Content-Type' => 'image/jpeg']
+    )]);
+
+    $this->withHeaders(storefrontHeaders())
+        ->postJson('/api/v1/catalog/products', [
+            'name' => 'Palm Oil',
+            'price' => 60000,
+            'category' => 'Trade',
+            'image_url' => 'https://zaheerah.com/storage/products/oil.jpg',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('warnings', []);
+
+    $product = Product::where('name', 'Palm Oil')->first();
+
+    // The ERP now owns a copy rather than pointing back at the shop.
+    expect($product->image_url)->toStartWith('storage/products/')
+        ->and($product->image_url)->not->toContain('zaheerah.com');
+
+    Storage::disk('public')->assertExists(str_replace('storage/', '', $product->image_url));
+    Http::assertSent(fn ($request) => $request->url() === 'https://zaheerah.com/storage/products/oil.jpg');
+});
+
+test('an imported image is served back as an absolute erp url', function () {
+    Http::fake(['zaheerah.com/*' => Http::response(
+        UploadedFile::fake()->image('oil.jpg')->getContent(),
+        200,
+        ['Content-Type' => 'image/jpeg']
+    )]);
+
+    $this->withHeaders(storefrontHeaders())->postJson('/api/v1/catalog/products', [
+        'name' => 'Palm Oil',
+        'price' => 60000,
+        'image_url' => 'https://zaheerah.com/storage/products/oil.jpg',
+    ])->assertCreated();
+
+    $stored = Product::where('name', 'Palm Oil')->value('image_url');
+
+    $this->withHeaders(storefrontHeaders())
+        ->getJson('/api/v1/catalog/products')
+        ->assertJsonPath('data.0.image_url', url($stored));
+});
+
+test('a link that cannot be downloaded is kept and reported', function () {
+    Http::fake(['zaheerah.com/*' => Http::response('nope', 404)]);
+
+    $response = $this->withHeaders(storefrontHeaders())
+        ->postJson('/api/v1/catalog/products', [
+            'name' => 'Palm Oil',
+            'price' => 60000,
+            'image_url' => 'https://zaheerah.com/storage/products/missing.jpg',
+        ])
+        ->assertCreated();
+
+    expect($response->json('warnings'))->toHaveCount(1)
+        ->and($response->json('warnings.0'))->toContain('Could not download');
+
+    // Nothing is lost: the link is kept so staff can see and fix it.
+    expect(Product::where('name', 'Palm Oil')->value('image_url'))
+        ->toBe('https://zaheerah.com/storage/products/missing.jpg');
+});
+
+test('a file that is not an image is not stored', function () {
+    Http::fake(['zaheerah.com/*' => Http::response('<?php echo "hi";', 200, ['Content-Type' => 'text/html'])]);
+
+    $response = $this->withHeaders(storefrontHeaders())
+        ->postJson('/api/v1/catalog/products', [
+            'name' => 'Palm Oil',
+            'price' => 60000,
+            'image_url' => 'https://zaheerah.com/storage/products/sneaky.php',
+        ])
+        ->assertCreated();
+
+    expect($response->json('warnings.0'))->toContain('is not an image');
+    expect(Product::where('name', 'Palm Oil')->value('image_url'))->toContain('sneaky.php');
+
+    Storage::disk('public')->assertDirectoryEmpty('products');
+});
+
+test('a relative path is stored as given without downloading anything', function () {
+    Http::fake();
+
+    $this->withHeaders(storefrontHeaders())
+        ->postJson('/api/v1/catalog/products', [
+            'name' => 'Palm Oil',
+            'price' => 60000,
+            'image_url' => 'storage/products/already-local.jpg',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('warnings', []);
+
+    expect(Product::where('name', 'Palm Oil')->value('image_url'))->toBe('storage/products/already-local.jpg');
+    Http::assertNothingSent();
+});
+
+test('an image already hosted by the erp is not downloaded again', function () {
+    Http::fake();
+
+    $ownUrl = url('storage/products/mine.jpg');
+
+    $this->withHeaders(storefrontHeaders())
+        ->postJson('/api/v1/catalog/products', [
+            'name' => 'Palm Oil',
+            'price' => 60000,
+            'image_url' => $ownUrl,
+        ])
+        ->assertCreated()
+        ->assertJsonPath('warnings', []);
+
+    expect(Product::where('name', 'Palm Oil')->value('image_url'))->toBe('storage/products/mine.jpg');
+    Http::assertNothingSent();
 });

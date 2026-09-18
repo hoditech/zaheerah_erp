@@ -8,16 +8,26 @@ use App\Models\InventoryTransaction;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Read/write access to the product catalogue for the public storefront.
  *
  * The ERP is the single source of truth for what exists, what it costs and how
- * much is left. The storefront keeps its own marketing copy and imagery, and
- * matches rows through erp_product_id.
+ * much is left. The storefront keeps its own marketing copy and matches rows
+ * through erp_product_id.
  */
 class CatalogController extends Controller
 {
+    /**
+     * How long to wait when pulling an image in, and the largest file to accept.
+     */
+    private const IMAGE_TIMEOUT = 15;
+
+    private const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
     /**
      * GET /api/v1/catalog/products
      *
@@ -99,10 +109,14 @@ class CatalogController extends Controller
             $product->category_id = $categoryId;
         }
 
-        // Only set the image when one is supplied, so a shop-side sync cannot
-        // wipe an image that was uploaded in the admin.
-        if (! empty($validated['image_url'])) {
-            $product->image_url = $validated['image_url'];
+        // Bring the image into this ERP rather than linking back to wherever it
+        // came from, so an imported product is complete on its own. Only set the
+        // image when one is supplied, so a shop-side sync cannot wipe an image
+        // that was uploaded in the admin.
+        [$imagePath, $imageWarning] = $this->importImage($validated['image_url'] ?? null);
+
+        if ($imagePath !== null) {
+            $product->image_url = $imagePath;
         }
 
         $product->save();
@@ -129,6 +143,89 @@ class CatalogController extends Controller
                 'image_url' => $product->image_url ? url($product->image_url) : null,
                 'created' => $created,
             ],
+            'warnings' => array_values(array_filter([$imageWarning])),
         ], $created ? 201 : 200);
+    }
+
+    /**
+     * Store a copy of the given image on this ERP's public disk.
+     *
+     * Accepts either a path this ERP already owns, or an absolute URL to fetch.
+     * Fetching means an imported product survives the other application going
+     * away, which is the point of moving the catalogue here.
+     *
+     * @return array{0: string|null, 1: string|null} the stored value and any warning
+     */
+    private function importImage(?string $url): array
+    {
+        if ($url === null || trim($url) === '') {
+            return [null, null];
+        }
+
+        // Already a relative path on this ERP's own disk.
+        if (! str_starts_with($url, 'http')) {
+            return [$url, null];
+        }
+
+        // An absolute URL pointing at this ERP: store the path, do not re-fetch.
+        if ($this->isOwnHost($url)) {
+            return [ltrim((string) parse_url($url, PHP_URL_PATH), '/'), null];
+        }
+
+        try {
+            $response = Http::timeout(self::IMAGE_TIMEOUT)->get($url);
+        } catch (Throwable $e) {
+            return [$url, "Could not download the product image from {$url}: {$e->getMessage()}"];
+        }
+
+        if ($response->failed()) {
+            return [$url, "Could not download the product image from {$url} (HTTP {$response->status()}). The link was kept instead."];
+        }
+
+        $contentType = (string) $response->header('Content-Type');
+
+        if (! str_starts_with($contentType, 'image/')) {
+            return [$url, "The file at {$url} is not an image ({$contentType}). The link was kept instead."];
+        }
+
+        $body = $response->body();
+
+        if (strlen($body) > self::MAX_IMAGE_BYTES) {
+            return [$url, "The image at {$url} is larger than " . (self::MAX_IMAGE_BYTES / 1024 / 1024) . ' MB. The link was kept instead.'];
+        }
+
+        $filename = $this->imageFilename($url, $contentType);
+
+        Storage::disk('public')->put('products/' . $filename, $body);
+
+        return ['storage/products/' . $filename, null];
+    }
+
+    private function isOwnHost(string $url): bool
+    {
+        $ownHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+        return $ownHost !== null && parse_url($url, PHP_URL_HOST) === $ownHost;
+    }
+
+    private function imageFilename(string $url, string $contentType): string
+    {
+        $extensions = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+            'image/bmp' => 'bmp',
+        ];
+
+        $base = pathinfo((string) parse_url($url, PHP_URL_PATH), PATHINFO_FILENAME);
+        $base = Str::slug($base) ?: 'image';
+
+        // Trust the content type first, then the URL's own extension.
+        $extension = $extensions[$contentType]
+            ?? strtolower(pathinfo((string) parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION))
+            ?: 'jpg';
+
+        return time() . '-' . $base . '.' . $extension;
     }
 }
