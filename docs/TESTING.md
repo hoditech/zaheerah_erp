@@ -6,7 +6,7 @@ real data.
 | App | Framework | Command | Result |
 |---|---|---|---|
 | `zaheerah` (frontsite) | PHPUnit 11 | `php artisan test` | 164 passing |
-| `zaheerah-epr/zaheerah-epr` (ERP) | Pest 3 | `php artisan test` | 150 passing |
+| `zaheerah-epr/zaheerah-epr` (ERP) | Pest 3 | `php artisan test` | 155 passing |
 
 ```bash
 # frontsite
@@ -74,7 +74,7 @@ php artisan test
 
 | File | Covers |
 |---|---|
-| `SeederIdempotencyTest.php` | `db:seed` run twice duplicates nothing (products, categories, users, roles, stock rows); seeded category assignments are correct. |
+| `SeederIdempotencyTest.php` | `db:seed` run twice duplicates nothing (products, categories, users, roles); the seeded catalogue is the real 28 products with a price, under the shop category, **every image file present both in the repository and on the public disk**, and an image chosen in the admin is not overwritten by reseeding. |
 | `PosSaleTest.php` | In-store sales: permission enforcement, `product_name` recorded, stock deducted, oversell refused **with no partial sale left behind**, activity log accuracy. |
 | `ProductImageTest.php` | Products are created in the admin: create and edit persist, image upload stored on the public disk, replaced on edit, kept when no new file is sent, non-images rejected, and the catalogue API hands the shop an absolute image URL. Also covers **importing** an image: the ERP downloads and stores its own copy, refuses non-images, keeps the link and warns when a download fails, and never re-downloads a file it already owns. |
 | `ProductFormContractTest.php` | Compares the Vue product forms against `productController` and fails if a required field is missing from one side. This is the test that catches form/controller drift. |

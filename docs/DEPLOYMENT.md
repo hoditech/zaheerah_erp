@@ -125,8 +125,16 @@ php artisan config:cache
 php artisan route:cache
 ```
 
-`db:seed` creates the categories, roles, 6 starter products and 5 staff accounts.
-It is idempotent now, so re-running it is safe.
+`db:seed` creates the categories, roles, the **full 28-product catalogue with its
+images**, and 5 staff accounts. It is idempotent, so re-running it is safe.
+
+> **Seeded products start at stock 0.** The opening quantity is a real business
+> figure, so the seeder does not invent one. Until you enter stock in the admin,
+> those products read as "Out of Stock" on the website.
+
+The product images ship in `database/seeders/images/products/` and are copied
+onto the ERP's public disk as the seeder runs, so a seeded product is
+self-contained. That is why `php artisan storage:link` matters.
 
 ### Two steps people forget on the ERP
 
@@ -204,7 +212,7 @@ Expected:
 
 ```
 Connected to: Zaheerah Ventures
-ERP reports 6 product(s) in the catalogue.
+ERP reports 28 product(s) in the catalogue.
 This site has 0 product(s) linked to the ERP.
 ```
 

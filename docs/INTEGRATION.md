@@ -159,8 +159,8 @@ Expected output:
 
 ```
 Connected to: Zaheerah Ventures
-ERP reports 6 product(s) in the catalogue.
-This site has 6 product(s) linked to the ERP.
+ERP reports 28 product(s) in the catalogue.
+This site has 0 product(s) linked to the ERP.
 ```
 
 ---
@@ -307,8 +307,9 @@ A wrong or missing key returns `401`.
    `sale_items.product_name`, but the column did not exist and was not fillable.
    Added the column and the fillable entry.
 6. **Duplicate ERP products.** `ProductSeeder` used `create()` instead of
-   `firstOrCreate()`, so it duplicated all 6 products on a second run. Made it
-   idempotent and removed the 6 duplicates plus their orphaned stock rows.
+   `firstOrCreate()`, so it duplicated the demo products on a second run. Made it
+   idempotent, and the seeder now ships the real 28-product catalogue instead of
+   placeholder demo rows.
 7. **Mis-filed ERP products.** Water was under Agriculture and rice under
    Restaurant. Corrected in the seeder and the data.
 8. **`activity_logs.user_id` was NOT NULL**, so `log_activity()` crashed for any
