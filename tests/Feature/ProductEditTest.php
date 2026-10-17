@@ -114,3 +114,52 @@ test('a negative adjustment cannot take stock below zero', function () {
 
     expect($this->product->fresh()->stock)->toBe(0);
 });
+
+/**
+ * Build a multipart/form-data body the same way a browser does.
+ */
+function productMultipartBody(string $boundary, array $fields): string
+{
+    $body = '';
+
+    foreach ($fields as $name => $value) {
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Disposition: form-data; name=\"{$name}\"\r\n\r\n";
+        $body .= $value . "\r\n";
+    }
+
+    return $body . "--{$boundary}--\r\n";
+}
+
+test('a real multipart PUT from the old browser bundle still saves', function () {
+    // Regression: before the rebuild reaches the browser, the deployed form
+    // sends a multipart PUT. PHP drops that body, so the global middleware has
+    // to parse it or every save fails with "name/price/category is required".
+    $boundary = '----zaheerah-regression';
+    $body = productMultipartBody($boundary, [
+        'name' => 'Hibiscus - Zobo (gari)',
+        'price' => '18000',
+        'unit_cost' => '',
+        'stock_adjustment' => '25',
+        'category_id' => (string) $this->category->id,
+        'weight_per_unit' => '',
+        'supplier_id' => '',
+        'exp_date' => '',
+        'batch_number' => '',
+        'storage_location' => '',
+    ]);
+
+    $response = $this->actingAs($this->staff)->call(
+        'PUT',
+        "/products/{$this->product->id}",
+        [],
+        [],
+        [],
+        ['CONTENT_TYPE' => "multipart/form-data; boundary={$boundary}"],
+        $body
+    );
+
+    $response->assertSessionHasNoErrors()->assertRedirect(route('products'));
+
+    expect($this->product->fresh()->stock)->toBe(25);
+});

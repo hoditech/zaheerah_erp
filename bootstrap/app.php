@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
 
+        // PHP does not populate a multipart PUT/PATCH body, so parse it before
+        // the trimming/null middleware and before validation runs.
+        $middleware->prepend(\App\Http\Middleware\ParseMultipartFormData::class);
 
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
