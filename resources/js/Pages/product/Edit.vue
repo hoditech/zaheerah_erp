@@ -51,10 +51,17 @@ const props = defineProps({
 });
 
 // Every required field here must match a rule in productController::update.
+//
+// "_method" is deliberate: the form always posts as multipart (forceFormData)
+// so the image upload works, and PHP does not parse the body of a multipart
+// PUT/PATCH request. Posting normally and spoofing the verb with _method is the
+// only way Laravel receives the fields *and* the uploaded file. Sending a real
+// PUT here made every save fail validation with "name/price/... is required".
 const form = useForm({
+  _method: 'put',
   name: props.product.name,
   price: props.product.price,
-  unit_cost: props.product.unit_cost,
+  unit_cost: props.product.unit_cost ?? '',
   stock_adjustment: '',
   category_id: props.product.category_id,
   weight_per_unit: props.product.weight_per_unit ?? '',
@@ -84,7 +91,8 @@ const onImageChange = (event: Event) => {
 
 // Handle form submission
 const submit = () => {
-  form.put(route('products.update', props.product.id), {
+  // post() + "_method: put" on purpose - see the comment on the useForm call.
+  form.post(route('products.update', props.product.id), {
     forceFormData: true,
     onSuccess: () => {
       form.reset();
@@ -137,7 +145,11 @@ const submit = () => {
               <div>
                 <InputLabel for="unit_cost" value="Unit Cost" />
                 <TextInput id="unit_cost" type="number" step="0.01" class="mt-1 block w-full"
-                  v-model.number="form.unit_cost" required />
+                  v-model.number="form.unit_cost" placeholder="Leave blank to keep the current cost" />
+                <p class="mt-1 text-xs text-gray-500">
+                  Optional. Seeded products may have no cost recorded yet; leaving it blank keeps
+                  whatever is stored and never blocks a stock adjustment.
+                </p>
                 <InputError class="mt-2" :message="form.errors.unit_cost" />
               </div>
               <div>

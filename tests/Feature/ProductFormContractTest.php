@@ -127,3 +127,15 @@ test('the forms post as multipart so the image can be uploaded', function () {
 
     expect(file_get_contents(resource_path($paths[0])))->toContain('forceFormData: true');
 });
+
+test('the edit form spoofs PUT with a POST so its multipart fields survive', function () {
+    // PHP does not parse the body of a multipart PUT/PATCH request, so a real
+    // form.put() with forceFormData arrives with every field missing and the
+    // controller rejects the save. The form must post normally and spoof the
+    // verb with _method=put instead.
+    $source = file_get_contents(resource_path('js/Pages/product/Edit.vue'));
+
+    expect($source)->toContain("_method: 'put'")
+        ->and($source)->toContain('form.post(')
+        ->and($source)->not->toContain('form.put(');
+});

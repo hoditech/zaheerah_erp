@@ -153,7 +153,9 @@ class productController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'unit_cost' => 'required|numeric|min:0',
+            // Optional on edit: the seeded catalogue was imported without costs,
+            // so requiring it here made every stock adjustment impossible.
+            'unit_cost' => 'nullable|numeric|min:0',
             'stock_adjustment' => 'nullable|integer',
             'category_id' => 'required|exists:categories,id',
             'weight_per_unit' => 'nullable|numeric|min:0',
@@ -165,15 +167,23 @@ class productController extends Controller
     
         try {
             DB::transaction(function () use ($validated, $product, $request) {
-                // Adjust stock if needed
-                if (isset($validated['stock_adjustment'])) {
-                    $product->stock += $validated['stock_adjustment'];
+                // Keep the stored cost when the form leaves the field blank, but
+                // fall back to 0 for the stock ledger: inventory_transactions
+                // requires a unit_cost, and the product may not have one yet.
+                $unitCost = $validated['unit_cost'] ?? $product->unit_cost;
+
+                // Adjust stock if needed. A blank/zero adjustment is a no-op
+                // rather than a zero-quantity ledger entry.
+                $adjustment = (int) ($validated['stock_adjustment'] ?? 0);
+
+                if ($adjustment !== 0) {
+                    $product->stock = max(0, $product->stock + $adjustment);
     
                     InventoryTransaction::create([
                         'product_id' => $product->id,
-                        'quantity' => $validated['stock_adjustment'],
-                        'unit_cost' => $validated['unit_cost'],
-                        'type' => $validated['stock_adjustment'] > 0 ? 'restock' : 'deduction',
+                        'quantity' => $adjustment,
+                        'unit_cost' => $unitCost ?? 0,
+                        'type' => $adjustment > 0 ? 'restock' : 'deduction',
                     ]);
                 }
     
@@ -182,7 +192,7 @@ class productController extends Controller
                 $product->update([
                     'name' => $validated['name'],
                     'price' => $validated['price'],
-                    'unit_cost' => $validated['unit_cost'],
+                    'unit_cost' => $unitCost,
                     'category_id' => $validated['category_id'],
                     'image_url' => $request->hasFile('image')
                         ? $this->storeImage($request)

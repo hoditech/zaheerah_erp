@@ -4,7 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import DataTable from '@/Components/DataTable.vue';
 // @ts-ignore
-import { can, is } from 'laravel-permission-to-vuejs'
+import { can } from 'laravel-permission-to-vuejs'
 import Edit from '../HR/Edit.vue';
 
 
@@ -57,16 +57,20 @@ const editProduct = (product: any) => {
 
 
 let actions: Action[] = [];
-if (is('Super Admin')) {
-    actions = [
-        {
-            label: "Edit",
-            onClick: editProduct,
-            class: "text-blue-600 hover:text-blue-900",
-        },
-        { label: "Delete", onClick: deleteProduct, class: "text-red-600 hover:text-red-900" },
 
-    ];
+// Match the route middleware (permission:edit_products / delete_products)
+// instead of hardcoding one role name: a Manager is allowed to edit products
+// by the routes but was never shown the buttons.
+if (can('edit_products')) {
+    actions.push({
+        label: "Edit",
+        onClick: editProduct,
+        class: "text-blue-600 hover:text-blue-900",
+    });
+}
+
+if (can('delete_products')) {
+    actions.push({ label: "Delete", onClick: deleteProduct, class: "text-red-600 hover:text-red-900" });
 }
 
 // Function to export products as CSV
