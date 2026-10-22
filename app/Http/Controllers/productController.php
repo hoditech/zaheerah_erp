@@ -6,8 +6,8 @@ use App\Models\Category;
 use App\Models\InventoryTransaction;
 use App\Models\Product;
 use App\Models\Supplier;
-use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -51,36 +51,30 @@ class productController extends Controller
 
     public function index()
     {
-        $categoryId = auth()->user()->category_id;
+        $user = auth()->user();
+
         $products = Product::with('category', 'supplier')
-            ->when($categoryId != 1, function ($query) use ($categoryId) {
-                // Filter by category_id if it is not 1
-                $query->where('category_id', $categoryId);
+            ->when(! $user->seesAllCategories(), function ($query) use ($user) {
+                $query->where('category_id', $user->category_id);
             })
             ->get();
-
-       // dd($products);
-        // Debugbar::info($products);
 
         return Inertia::render('product/ProductPage', props: [
             'products' => $products,
         ]);
-
-
     }
 
 
     public function create()
     {
-        $categoryId = auth()->user()->category_id;
+        $user = auth()->user();
 
-
-        $categories = Category::when($categoryId != 1, function ($query) use ($categoryId) {
-            // Fetch only the user's category if their category_id is not 1
-            $query->where('id', $categoryId);
+        $categories = Category::when(! $user->seesAllCategories(), function ($query) use ($user) {
+            $query->where('id', $user->category_id);
         })->get();
 
         $suppliers = Supplier::all();
+
         return Inertia::render('product/Create', [
             'categories' => $categories,
             'suppliers' => $suppliers,
@@ -102,36 +96,43 @@ class productController extends Controller
             'batch_number' => 'nullable|string|max:255',
             'storage_location' => 'nullable|string|max:255',
         ] + $this->imageRules());
-    
+
         try {
-            $product = Product::create([
-                'name' => $validated['name'],
-                'price' => $validated['price'],
-                'unit_cost' => $validated['unit_cost'],
-                'stock' => $validated['initial_stock'], // Set initial stock
-                'category_id' => $validated['category_id'],
-                'image_url' => $this->storeImage($request),
-                // Optional fields
-                'weight_per_unit' => $validated['weight_per_unit'] ?? null,
-                'supplier_id' => $validated['supplier_id'] ?? null,
-                'exp_date' => $validated['exp_date'] ?? null,
-                'batch_number' => $validated['batch_number'] ?? null,
-                'storage_location' => $validated['storage_location'] ?? null,
-            ]);
-    
-            // Record inventory transaction
-            InventoryTransaction::create([
-                'product_id' => $product->id,
-                'quantity' => $validated['initial_stock'],
-                'unit_cost' => $validated['unit_cost'],
-                'type' => 'initial',
-            ]);
-    
+            $product = DB::transaction(function () use ($validated, $request) {
+                $product = Product::create([
+                    'name' => $validated['name'],
+                    'price' => $validated['price'],
+                    'unit_cost' => $validated['unit_cost'],
+                    'stock' => $validated['initial_stock'],
+                    'category_id' => $validated['category_id'],
+                    'image_url' => $this->storeImage($request),
+                    'weight_per_unit' => $validated['weight_per_unit'] ?? null,
+                    'supplier_id' => $validated['supplier_id'] ?? null,
+                    'exp_date' => $validated['exp_date'] ?? null,
+                    'batch_number' => $validated['batch_number'] ?? null,
+                    'storage_location' => $validated['storage_location'] ?? null,
+                ]);
+
+                // Only log opening stock when there actually is some. A zero
+                // quantity ledger row is meaningless noise.
+                if ((int) $validated['initial_stock'] > 0) {
+                    InventoryTransaction::create([
+                        'product_id' => $product->id,
+                        'quantity' => $validated['initial_stock'],
+                        'unit_cost' => $validated['unit_cost'],
+                        'type' => 'initial',
+                    ]);
+                }
+
+                return $product;
+            });
+
             log_activity('Product Created', 'Created product: ' . $product->name);
-    
+
             return redirect()->route('products')->with('success', 'Product created successfully.');
-        } catch (\Exception $e) {
-            \Log::error("Product Store Error: " . $e->getMessage());
+        } catch (\Throwable $e) {
+            report($e);
+
             return back()->withErrors(['error' => 'Failed to create product. Please try again.']);
         }
     }
@@ -140,12 +141,12 @@ class productController extends Controller
     {
         $suppliers = Supplier::all();
         $categories = Category::all();
+
         return Inertia::render('product/Edit', [
             'product' => $product,
             'categories' => $categories,
-            'suppliers' => $suppliers
+            'suppliers' => $suppliers,
         ]);
-
     }
 
     public function update(Request $request, Product $product)
@@ -164,29 +165,38 @@ class productController extends Controller
             'batch_number' => 'nullable|string|max:255',
             'storage_location' => 'nullable|string|max:255',
         ] + $this->imageRules());
-    
+
         try {
             DB::transaction(function () use ($validated, $product, $request) {
+                $product = Product::lockForUpdate()->findOrFail($product->id);
+
                 // Keep the stored cost when the form leaves the field blank, but
                 // fall back to 0 for the stock ledger: inventory_transactions
                 // requires a unit_cost, and the product may not have one yet.
                 $unitCost = $validated['unit_cost'] ?? $product->unit_cost;
 
-                // Adjust stock if needed. A blank/zero adjustment is a no-op
-                // rather than a zero-quantity ledger entry.
+                // Adjust stock if needed. The ledger must record the movement
+                // that was actually applied, not the raw request, or a clamped
+                // adjustment leaves the ledger disagreeing with the stock row.
                 $adjustment = (int) ($validated['stock_adjustment'] ?? 0);
 
                 if ($adjustment !== 0) {
-                    $product->stock = max(0, $product->stock + $adjustment);
-    
-                    InventoryTransaction::create([
-                        'product_id' => $product->id,
-                        'quantity' => $adjustment,
-                        'unit_cost' => $unitCost ?? 0,
-                        'type' => $adjustment > 0 ? 'restock' : 'deduction',
-                    ]);
+                    $current = (int) $product->stock;
+                    $target = max(0, $current + $adjustment);
+                    $applied = $target - $current;
+
+                    if ($applied !== 0) {
+                        $product->stock = $target;
+
+                        InventoryTransaction::create([
+                            'product_id' => $product->id,
+                            'quantity' => $applied,
+                            'unit_cost' => $unitCost ?? 0,
+                            'type' => $applied > 0 ? 'restock' : 'deduction',
+                        ]);
+                    }
                 }
-    
+
                 // Update product. The image is only replaced when a new file is
                 // uploaded, otherwise the existing one is kept.
                 $product->update([
@@ -204,25 +214,52 @@ class productController extends Controller
                     'storage_location' => $validated['storage_location'] ?? $product->storage_location,
                 ]);
             });
-    
+
             log_activity('Product Updated', 'Updated product: ' . $product->name);
+
             return redirect()->route('products')->with('success', 'Product updated successfully.');
-    
         } catch (\Throwable $e) {
-            \Log::error("Product Update Error: " . $e->getMessage());
+            report($e);
+
             return back()->withErrors(['error' => 'Failed to update product. Please try again.']);
         }
     }
-    
 
 
     public function destroy(Product $product)
     {
         $productName = $product->name;
-        $product->delete();
-        // Log activity for product deletion
+
+        // A delete used to either fail with a raw SQL foreign-key 500 (product
+        // has sales) or silently cascade away production/inventory history.
+        // Refuse it explicitly instead, so history is never destroyed.
+        $hasSales = $product->saleItems()->exists();
+        $hasProduction = $product->productions()->exists();
+        $hasStockMovement = $product->inventoryTransactions()
+            ->whereNotIn('type', ['initial'])
+            ->exists();
+
+        if ($hasSales || $hasProduction || $hasStockMovement) {
+            return back()->withErrors([
+                'error' => "Cannot delete {$productName}: it has sales, production or stock-movement history. "
+                    . 'Keep the product for the audit trail instead.',
+            ]);
+        }
+
+        try {
+            DB::transaction(function () use ($product) {
+                // Only the opening-stock rows are left; they belong to this row.
+                $product->inventoryTransactions()->delete();
+                $product->delete();
+            });
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors(['error' => 'Failed to delete product. Please try again.']);
+        }
+
         log_activity('Product Deleted', 'Deleted product: ' . $productName);
+
         return redirect()->route('products')->with('success', 'Product deleted successfully.');
     }
-
 }

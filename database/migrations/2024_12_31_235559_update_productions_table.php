@@ -16,7 +16,9 @@ return new class extends Migration
             $table->decimal('labor_cost', 10, 2)->default(0)->after('material_cost');
             $table->decimal('overhead_cost', 10, 2)->default(0)->after('labor_cost');
             $table->decimal('total_cost', 10, 2)->storedAs('material_cost + labor_cost + overhead_cost')->after('overhead_cost');
-            $table->string('batch_status')->default('pending')->after('production_date');
+            // No after() target: the productions table has no production_date
+            // column, which made this migration fail on MySQL.
+            $table->string('batch_status')->default('Pending');
         });
     }
 

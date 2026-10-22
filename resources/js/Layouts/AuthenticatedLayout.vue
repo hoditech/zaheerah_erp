@@ -117,6 +117,28 @@ onUnmounted(() => {
                         <span v-if="sidebarOpen || isMobile">Inventory</span>
                         </Link>
                     </li>
+                    <li v-if="is('Manager | Super Admin | Admin')" :class="{
+                        'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
+                        'justify-center': !sidebarOpen,
+                        'space-x-2': sidebarOpen,
+                        'active-link': route().current('bloom-tiers.index')
+                    }">
+                        <Link :href="route('bloom-tiers.index')" class="flex items-center space-x-2">
+                        <span>🌸</span>
+                        <span v-if="sidebarOpen || isMobile">Bloom Tiers</span>
+                        </Link>
+                    </li>
+                    <li v-if="is('Manager | Super Admin | Admin')" :class="{
+                        'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
+                        'justify-center': !sidebarOpen,
+                        'space-x-2': sidebarOpen,
+                        'active-link': route().current('bloom-products.index')
+                    }">
+                        <Link :href="route('bloom-products.index')" class="flex items-center space-x-2">
+                        <span>🛍️</span>
+                        <span v-if="sidebarOpen || isMobile">Bloom Cartons</span>
+                        </Link>
+                    </li>
                     <li v-if="is('Manager  | Super Admin|Admin')" :class="{
                         'p-4 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center': true,
                         'justify-center': !sidebarOpen,

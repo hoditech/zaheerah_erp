@@ -2,18 +2,17 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use LaravelAndVueJS\Traits\LaravelPermissionToVueJS;
 use Spatie\Permission\Traits\HasRoles;
 
-
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles,  LaravelPermissionToVueJS;
+    use HasFactory, Notifiable, HasRoles, LaravelPermissionToVueJS, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -56,30 +55,44 @@ class User extends Authenticatable
         ];
     }
 
-     // A user belongs to one store
-     public function category()
-     {
-         return $this->belongsTo(Category::class);
-     }
+    // A user belongs to one store
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 
-     public function payrolls()
-     {
-         return $this->hasMany(Payroll::class);
-     }
+    public function payrolls()
+    {
+        return $this->hasMany(Payroll::class);
+    }
 
-     public function activityLogs(){
+    public function activityLogs()
+    {
         return $this->hasMany(ActivityLog::class);
-     }
+    }
 
-     public static function generateUserCode()
+    /**
+     * "General" is the cross-category bucket. This used to be hard-coded as
+     * category_id == 1, which silently broke whenever ids shifted.
+     */
+    public function seesAllCategories(): bool
+    {
+        return $this->category_id === null
+            || $this->category?->name === 'General';
+    }
+
+    public static function generateUserCode()
     {
         $year = date('Y'); // Get current year
         $prefix = "ZVL/{$year}/HR/SS/";
 
-        // Get the last user_code from the database
-        $lastUser = User::where('employee_id', 'LIKE', "{$prefix}%")
-                        ->orderBy('employee_id', 'desc')
-                        ->first();
+        // Get the last user_code from the database. Soft-deleted users still
+        // hold their employee_id, so they must be included or a duplicate code
+        // would violate the unique index.
+        $lastUser = static::withTrashed()
+            ->where('employee_id', 'LIKE', "{$prefix}%")
+            ->orderBy('employee_id', 'desc')
+            ->first();
 
         if ($lastUser) {
             // Extract the last number and increment it
@@ -91,5 +104,4 @@ class User extends Authenticatable
 
         return $prefix . $newNumber;
     }
-     
 }

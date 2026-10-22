@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\BloomFeaturedProductController;
+use App\Http\Controllers\BloomTierController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EventController;
@@ -16,16 +18,33 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\WelcomeController;
 use App\Models\User;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Spatie\Permission\Middleware\RoleMiddleware;
 
+/*
+|--------------------------------------------------------------------------
+| Authorisation notes
+|--------------------------------------------------------------------------
+|
+| - `login_permission` enforces users.can_login on every authenticated
+|   request. `verified` used to sit here but was a no-op, because the User
+|   model does not implement MustVerifyEmail.
+| - Data-level endpoints now carry an explicit `permission:` gate. Finances
+|   and reports are limited to finance/super-admin permissions; enquiries are
+|   limited to user-management permissions.
+|
+*/
+
 Route::get('/', [WelcomeController::class, 'index']);
 
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::middleware(['auth', 'login_permission'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard')
+        // Any real staff account (has a role or a permission) can see the
+        // dashboard; an account with neither cannot.
+        ->middleware('staff');
 
     Route::get('/products', [ProductController::class, 'index'])
         ->name('products')
@@ -51,6 +70,64 @@ Route::middleware(['auth', 'verified'])->group(function () {
     ->name('products.destroy')
     ->middleware('permission:delete_products');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Bloom page pricing
+    |--------------------------------------------------------------------------
+    |
+    | The ERP owns the Bloom Tier Benefits and Best-Selling Carton cards. The
+    | public frontsite mirrors them through `erp:sync-bloom`.
+    |
+    */
+
+    Route::get('bloom-tiers', [BloomTierController::class, 'index'])
+        ->name('bloom-tiers.index')
+        ->middleware('permission:view_bloom_pricing');
+
+    Route::get('bloom-tiers/create', [BloomTierController::class, 'create'])
+        ->name('bloom-tiers.create')
+        ->middleware('permission:manage_bloom_pricing');
+
+    Route::post('bloom-tiers', [BloomTierController::class, 'store'])
+        ->name('bloom-tiers.store')
+        ->middleware('permission:manage_bloom_pricing');
+
+    Route::get('bloom-tiers/{bloomTier}/edit', [BloomTierController::class, 'edit'])
+        ->name('bloom-tiers.edit')
+        ->middleware('permission:manage_bloom_pricing');
+
+    Route::put('bloom-tiers/{bloomTier}', [BloomTierController::class, 'update'])
+        ->name('bloom-tiers.update')
+        ->middleware('permission:manage_bloom_pricing');
+
+    Route::delete('bloom-tiers/{bloomTier}', [BloomTierController::class, 'destroy'])
+        ->name('bloom-tiers.destroy')
+        ->middleware('permission:manage_bloom_pricing');
+
+    Route::get('bloom-products', [BloomFeaturedProductController::class, 'index'])
+        ->name('bloom-products.index')
+        ->middleware('permission:view_bloom_pricing');
+
+    Route::get('bloom-products/create', [BloomFeaturedProductController::class, 'create'])
+        ->name('bloom-products.create')
+        ->middleware('permission:manage_bloom_pricing');
+
+    Route::post('bloom-products', [BloomFeaturedProductController::class, 'store'])
+        ->name('bloom-products.store')
+        ->middleware('permission:manage_bloom_pricing');
+
+    Route::get('bloom-products/{bloomProduct}/edit', [BloomFeaturedProductController::class, 'edit'])
+        ->name('bloom-products.edit')
+        ->middleware('permission:manage_bloom_pricing');
+
+    Route::put('bloom-products/{bloomProduct}', [BloomFeaturedProductController::class, 'update'])
+        ->name('bloom-products.update')
+        ->middleware('permission:manage_bloom_pricing');
+
+    Route::delete('bloom-products/{bloomProduct}', [BloomFeaturedProductController::class, 'destroy'])
+        ->name('bloom-products.destroy')
+        ->middleware('permission:manage_bloom_pricing');
+
     Route::get('/pos', [PosController::class, 'index'])
         ->name('pos')
         ->middleware('permission:view_sales');
@@ -60,7 +137,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/pos/generate-receipt', [PosController::class, 'generateReceipt'])
         ->middleware('permission:generate_sales_reports');
-    Route::get('/pos/receipt/{receiptNumber}', [PosController::class, 'getReceipt'])->name('pos.receipt.show'); 
+
+    Route::get('/pos/receipt/{receiptNumber}', [PosController::class, 'getReceipt'])
+        ->name('pos.receipt.show')
+        ->middleware('permission:view_sales|generate_sales_reports');
+
+    Route::get('/products/{product}/stock', [PosController::class, 'getStock'])
+        ->middleware('permission:view_products|view_sales');
 
 
     Route::get('employees', [EmployeeController::class, 'index'])
@@ -182,24 +265,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('events', [EventController::class, 'index'])->name('events.index');
     Route::get('events/{event}', [EventController::class, 'show'])->name('events.show');
 
-    // Enquiries that arrived from the public website (quote requests, contact form).
-    Route::get('online-leads', [OnlineLeadController::class, 'index'])->name('online-leads.index');
-    Route::patch('online-leads/{lead}', [OnlineLeadController::class, 'updateStatus'])->name('online-leads.update');
+    // Enquiries that arrived from the public website (quote requests, contact
+    // form). These carry customer name, email and phone, so they are limited to
+    // the same permissions that manage staff accounts.
+    Route::get('online-leads', [OnlineLeadController::class, 'index'])
+        ->name('online-leads.index')
+        ->middleware('permission:view_users|manage_users');
 
-    Route::get('/products/{product}/stock', [PosController::class, 'getStock']);
-
-
-
-
+    Route::patch('online-leads/{lead}', [OnlineLeadController::class, 'updateStatus'])
+        ->name('online-leads.update')
+        ->middleware('permission:view_users|manage_users');
 });
 
 // Routes restricted to Super Admin
-Route::middleware(['auth', 'role:Super Admin'])->group(function () {
+Route::middleware(['auth', 'login_permission', 'role:Super Admin'])->group(function () {
     Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
 
     Route::get('/pos/sale-history', [PosController::class, 'saleHistory'])->name('sale-history');
 
-    Route::resource('payrolls', PayrollController::class);
+    Route::resource('payrolls', PayrollController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::post('payrolls/{payroll}/mark-paid', [PayrollController::class, 'markAsPaid'])->name('payrolls.markPaid');
 
     Route::get('/users', function () {
@@ -218,14 +302,10 @@ Route::middleware(['auth', 'role:Super Admin'])->group(function () {
     Route::post('events', [EventController::class, 'store'])->name('events.store');
     Route::put('events/{event}', [EventController::class, 'update'])->name('events.update');
     Route::delete('events/{event}', [EventController::class, 'destroy'])->name('events.destroy');
-
-
 });
 
 
-
-
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'login_permission'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -233,7 +313,15 @@ Route::middleware('auth')->group(function () {
 
 });
 
-Route::middleware(['auth'])->group(function () {
+/*
+|--------------------------------------------------------------------------
+| Reports
+|--------------------------------------------------------------------------
+|
+| Business-wide sales, cost and stock data: finance-level permissions only.
+|
+*/
+Route::middleware(['auth', 'login_permission', 'permission:generate_sales_reports|generate_reports'])->group(function () {
     Route::prefix('reports')->group(function () {
         Route::get('/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
         Route::get('/products', [ReportController::class, 'productPerformance'])->name('reports.products');

@@ -128,6 +128,12 @@ php artisan route:cache
 `db:seed` creates the categories, roles, the **full 28-product catalogue with its
 images**, and 5 staff accounts. It is idempotent, so re-running it is safe.
 
+`db:seed` also creates the Bloom page pricing permissions
+(`view_bloom_pricing`, `manage_bloom_pricing`) used by the `/bloom-tiers` and
+`/bloom-products` admin screens; the Super Admin role receives both. Those two
+screens are the source of truth for the pricing shown on the frontsite's
+`/zaheerah-bloom` page.
+
 > **Seeded products start at stock 0.** The opening quantity is a real business
 > figure, so the seeder does not invent one. Until you enter stock in the admin,
 > those products read as "Out of Stock" on the website.

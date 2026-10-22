@@ -64,7 +64,11 @@ test('user can delete their account', function () {
         ->assertRedirect('/');
 
     $this->assertGuest();
-    $this->assertNull($user->fresh());
+
+    // Employees are soft-deleted so their payroll and audit history survives a
+    // deleted account.
+    expect($user->fresh())->not->toBeNull()
+        ->and(User::withTrashed()->find($user->id)->trashed())->toBeTrue();
 });
 
 test('correct password must be provided to delete account', function () {

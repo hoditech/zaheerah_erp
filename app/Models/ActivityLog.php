@@ -20,7 +20,8 @@ class ActivityLog extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        // Soft-deleted staff should still be named in the audit trail.
+        return $this->belongsTo(User::class)->withTrashed();
 
     }
 }

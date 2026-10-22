@@ -110,8 +110,11 @@ class ReportController extends Controller
     // Inventory Status Report (JSON response)
     public function inventoryReport()
     {
+        // Order by a column that actually exists. The old code ordered by
+        // "remaining_units", which is commented out of the products migration:
+        // SQLite silently ignored it and MySQL/Postgres would 500.
         $products = Product::with(['category', 'supplier'])
-            ->orderBy('remaining_units')
+            ->orderBy('stock')
             ->paginate(10);
 
         return response()->json([

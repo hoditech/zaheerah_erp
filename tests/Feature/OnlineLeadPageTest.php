@@ -2,9 +2,15 @@
 
 use App\Models\OnlineLead;
 use App\Models\User;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function () {
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    // Enquiries carry customer PII, so the route is permission-gated now.
     $this->staff = User::factory()->create();
+    $this->staff->givePermissionTo(Permission::findOrCreate('view_users'));
 });
 
 test('guests are sent to the login screen', function () {

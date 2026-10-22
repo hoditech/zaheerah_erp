@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\InventoryTransaction;
 use App\Models\Product;
 use App\Models\Production;
-use DB;
+use App\Support\SequentialNumber;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use RuntimeException;
+use Throwable;
 
 class ProductionController extends Controller
 {
@@ -16,15 +19,12 @@ class ProductionController extends Controller
      */
     public function index()
     {
-        // Get the current user's category_id
-        $categoryId = auth()->user()->category_id;
+        $user = auth()->user();
 
-        // Fetch production batches based on the user's category_id
         $batches = Production::with('product')
-            ->when($categoryId != 1, function ($query) use ($categoryId) {
-                // Filter production batches by products that belong to the user's category
-                $query->whereHas('product', function ($productQuery) use ($categoryId) {
-                    $productQuery->where('category_id', $categoryId);
+            ->when(! $user->seesAllCategories(), function ($query) use ($user) {
+                $query->whereHas('product', function ($productQuery) use ($user) {
+                    $productQuery->where('category_id', $user->category_id);
                 });
             })
             ->latest()
@@ -38,13 +38,12 @@ class ProductionController extends Controller
      */
     public function create()
     {
-        $categoryId = auth()->user()->category_id;
+        $user = auth()->user();
 
-        $products = Product::when($categoryId != 1, function ($query) use ($categoryId) {
-            // Filter by category_id if it is not 1
-            $query->where('category_id', $categoryId);
-        })
-            ->get();
+        $products = Product::when(! $user->seesAllCategories(), function ($query) use ($user) {
+            $query->where('category_id', $user->category_id);
+        })->get();
+
         return inertia('ProductionBatches/Create', compact('products'));
     }
 
@@ -53,59 +52,30 @@ class ProductionController extends Controller
      */
     public function store(Request $request)
     {
+        $validated = $this->validated($request);
 
-        $validated = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
-            'description' => 'nullable|string',
-            'material_cost' => 'required|numeric',
-            'labor_cost' => 'required|numeric',
-            'overhead_cost' => 'required|numeric',
-            'batch_status' => 'required|in:Pending,In Progress,Completed,Cancelled',
-        ]);
-
-
-        $batchId = Production::max('id') + 1;
-        $validated['batch_number'] = 'BATCH-' . str_pad($batchId, 5, '0', STR_PAD_LEFT);
-
-        DB::beginTransaction();
         try {
-            // Create production batch
-            $production = Production::create($validated);
+            $production = DB::transaction(function () use ($validated) {
+                $validated['batch_number'] = SequentialNumber::batch();
 
-            // If status is "Completed", update inventory
-            if ($validated['batch_status'] === 'Completed') {
-                $product = Product::find($validated['product_id']);
+                $production = Production::create($validated);
 
-                // 1. Increase product stock
-                $product->stock += $validated['quantity'];
-                $product->save();
+                // Only a completed batch puts finished units into stock.
+                if ($validated['batch_status'] === 'Completed') {
+                    $this->addStock($production, $validated);
+                }
 
-                // 2. Record inventory transaction (KEY FIX)
-                InventoryTransaction::create([
-                    'product_id' => $product->id,
-                    'quantity' => $validated['quantity'],
-                    'unit_cost' => $this->calculateUnitCost($production), // See helper below
-                    'type' => 'production',
-                    'batch_reference' => $production->batch_number,
-                    'notes' => 'Batch ' . $production->batch_number . ' (' . $production->description . ')',
+                return $production;
+            });
+        } catch (Throwable $e) {
+            report($e);
 
-                ]);
-            }
-
-            DB::commit();
-
-            log_activity('Production Created', 'Created production batch: ' . $production->batch_number);
-
-            // Create the production batch
-
-            return redirect()->route('productions.index')->with('success', 'Batch created successfully.');
-        }// In store(), add rollback and error handling:
-        catch (\Exception $e) {
-            DB::rollBack(); // 👈 ADD THIS
-            \Log::error("Production Creation Failed: " . $e->getMessage());
-            return back()->with('error', 'Failed to create batch. Check logs.');
+            return back()->with('error', 'Failed to create batch: ' . $e->getMessage());
         }
+
+        log_activity('Production Created', 'Created production batch: ' . $production->batch_number);
+
+        return redirect()->route('productions.index')->with('success', 'Batch created successfully.');
     }
 
     /**
@@ -113,14 +83,12 @@ class ProductionController extends Controller
      */
     public function edit(Production $production)
     {
+        $user = auth()->user();
 
-        $categoryId = auth()->user()->category_id;
+        $products = Product::when(! $user->seesAllCategories(), function ($query) use ($user) {
+            $query->where('category_id', $user->category_id);
+        })->get();
 
-        $products = Product::when($categoryId != 1, function ($query) use ($categoryId) {
-            // Filter by category_id if it is not 1
-            $query->where('category_id', $categoryId);
-        })
-            ->get();
         return Inertia::render('ProductionBatches/Edit', [
             'production' => $production,
             'products' => $products,
@@ -129,129 +97,146 @@ class ProductionController extends Controller
 
     /**
      * Update a batch in the database.
+     *
+     * The stock movement is always: reverse what the old state added, then
+     * apply what the new state adds. That single rule covers every transition
+     * (pending -> completed, completed -> pending, completed -> completed with
+     * a different product or quantity) and fixes three bugs in the old code:
+     * stock being moved to the wrong product, the old product never being
+     * reverted, and the ledger cost being read from the stale row.
      */
-
     public function update(Request $request, Production $production)
     {
-        $validated = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
-            'description' => 'nullable|string',
-            'material_cost' => 'required|numeric',
-            'labor_cost' => 'required|numeric',
-            'overhead_cost' => 'required|numeric',
-            'batch_status' => 'required|in:Pending,In Progress,Completed,Cancelled',
-        ]);
+        $validated = $this->validated($request);
+        $batchNumber = $production->batch_number;
 
-        DB::beginTransaction();
         try {
-            $product = Product::findOrFail($validated['product_id']);
-
-            // Case 1: Newly marked as "Completed"
-            if ($validated['batch_status'] === 'Completed' && $production->batch_status !== 'Completed') {
-
-                if ($product->stock < $production->quantity) {
-                    throw new \Exception("Insufficient stock to revert this batch.");
+            DB::transaction(function () use ($production, $validated) {
+                if ($production->batch_status === 'Completed') {
+                    $this->removeStock($production);
                 }
-                // Update stock
-                $product->stock += $validated['quantity'];
-                $product->save();
 
-                // Record inventory transaction (using batch_number as reference)
-                InventoryTransaction::create([
-                    'product_id' => $product->id,
-                    'quantity' => $validated['quantity'],
-                    'unit_cost' => $this->calculateUnitCost($production),
-                    'type' => 'production',
-                    'batch_reference' => $production->batch_number, // Add this field to inventory_transactions
-                    'notes' => 'Batch ' . $production->batch_number . ' (' . $production->description . ')',
-                ]);
-            }
+                $production->update($validated);
 
-            // Case 2: Changed FROM "Completed"
-            elseif ($production->batch_status === 'Completed' && $validated['batch_status'] !== 'Completed') {
-                // Revert stock
-                $product->stock -= $production->quantity;
-                $product->save();
-
-                // Delete the related transaction (using batch_number)
-                InventoryTransaction::where('batch_reference', $production->batch_number)
-                    ->where('type', 'production')
-                    ->delete();
-            }
-
-            // Case 3: Quantity/cost changed while status remains "Completed"
-            elseif ($production->batch_status === 'Completed' && $validated['batch_status'] === 'Completed') {
-                $quantityDiff = $validated['quantity'] - $production->quantity;
-
-                if ($quantityDiff != 0) {
-                    $product->stock += $quantityDiff;
-                    $product->save();
-
-                    // Update existing transaction
-                    InventoryTransaction::where('batch_reference', $production->batch_number)
-                        ->where('type', 'production')
-                        ->update([
-                            'quantity' => $validated['quantity'],
-                            'unit_cost' => $this->calculateUnitCost($production),
-                        ]);
+                if ($validated['batch_status'] === 'Completed') {
+                    $this->addStock($production, $validated);
                 }
-            }
+            });
+        } catch (Throwable $e) {
+            report($e);
 
-            // Update production record
-            $production->update($validated);
-            DB::commit();
-
-            log_activity('Production Updated', 'Updated batch: ' . $production->batch_number);
-            return redirect()->route('productions.index')->with('success', 'Batch updated!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error("Production Update Failed: " . $e->getMessage());
-            return back()->with('error', 'Failed to update batch. Check logs.');
+            return back()->with('error', 'Failed to update batch: ' . $e->getMessage());
         }
+
+        log_activity('Production Updated', 'Updated batch: ' . $batchNumber);
+
+        return redirect()->route('productions.index')->with('success', 'Batch updated!');
     }
-
-    // Helper method
-
-
 
     /**
      * Remove a batch from the database.
      */
-    // In destroy() method, add stock reversion:
     public function destroy(Production $production)
     {
-        DB::beginTransaction();
+        $batchNumber = $production->batch_number;
+
         try {
-            // Revert stock if batch was completed
-            if ($production->batch_status === 'Completed') {
-                $product = Product::find($production->product_id);
-                $product->stock -= $production->quantity;
-                $product->save();
+            DB::transaction(function () use ($production) {
+                if ($production->batch_status === 'Completed') {
+                    $this->removeStock($production);
+                }
 
-                // Delete linked transaction
-                InventoryTransaction::where('batch_reference', $production->batch_number)
-                    ->delete();
-            }
+                $production->delete();
+            });
+        } catch (Throwable $e) {
+            report($e);
 
-            $production->delete();
-            DB::commit();
-
-            log_activity('Production Deleted', 'Deleted batch: ' . $production->batch_number);
-            return redirect()->route('productions.index')->with('success', 'Batch deleted!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error("Deletion Failed: " . $e->getMessage());
-            return back()->with('error', 'Failed to delete batch.');
+            return back()->with('error', 'Failed to delete batch: ' . $e->getMessage());
         }
+
+        log_activity('Production Deleted', 'Deleted batch: ' . $batchNumber);
+
+        return redirect()->route('productions.index')->with('success', 'Batch deleted!');
     }
 
-    function calculateUnitCost(Production $production)
+    /**
+     * @return array<string, mixed>
+     */
+    private function validated(Request $request): array
     {
-        // Total production cost / quantity produced
-        return ($production->material_cost + $production->labor_cost + $production->overhead_cost)
-            / $production->quantity;
+        return $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'quantity' => 'required|integer|min:1',
+            'description' => 'nullable|string',
+            'material_cost' => 'required|numeric|min:0',
+            'labor_cost' => 'required|numeric|min:0',
+            'overhead_cost' => 'required|numeric|min:0',
+            'batch_status' => 'required|in:Pending,In Progress,Completed,Cancelled',
+        ]);
+    }
+
+    /**
+     * Put a completed batch into stock and record it in the inventory ledger.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function addStock(Production $production, array $data): void
+    {
+        $product = Product::lockForUpdate()->findOrFail($data['product_id']);
+
+        $product->stock = (int) $product->stock + (int) $data['quantity'];
+        $product->save();
+
+        InventoryTransaction::create([
+            'product_id' => $product->id,
+            'quantity' => (int) $data['quantity'],
+            'unit_cost' => $this->unitCost($data),
+            'type' => 'production',
+            'batch_reference' => $production->batch_number,
+            'notes' => 'Batch ' . $production->batch_number . ' (' . ($data['description'] ?? '') . ')',
+        ]);
+    }
+
+    /**
+     * Take a completed batch back out of stock, refusing to go negative.
+     */
+    private function removeStock(Production $production): void
+    {
+        $product = Product::lockForUpdate()->find($production->product_id);
+
+        if (! $product) {
+            return;
+        }
+
+        if ((int) $product->stock < (int) $production->quantity) {
+            throw new RuntimeException(
+                "Cannot revert batch {$production->batch_number}: only {$product->stock} unit(s) of "
+                . "{$product->name} are left in stock but the batch produced {$production->quantity}. "
+                . 'Adjust the stock first so it never goes negative.'
+            );
+        }
+
+        $product->stock = (int) $product->stock - (int) $production->quantity;
+        $product->save();
+
+        InventoryTransaction::where('batch_reference', $production->batch_number)
+            ->where('type', 'production')
+            ->delete();
+    }
+
+    /**
+     * Unit cost for the ledger, based on the batch values being saved.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function unitCost(array $data): float
+    {
+        $quantity = max(1, (int) ($data['quantity'] ?? 1));
+
+        $total = (float) ($data['material_cost'] ?? 0)
+            + (float) ($data['labor_cost'] ?? 0)
+            + (float) ($data['overhead_cost'] ?? 0);
+
+        return round($total / $quantity, 2);
     }
 }

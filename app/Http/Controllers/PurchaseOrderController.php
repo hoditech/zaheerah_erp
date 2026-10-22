@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class PurchaseOrderController extends Controller
 {
@@ -15,19 +16,21 @@ class PurchaseOrderController extends Controller
     public function index()
     {
         $purchaseOrders = PurchaseOrder::with(['supplier', 'category'])->get();
+
         return Inertia('procurement/PurchaseOrder/Index', compact('purchaseOrders'));
     }
 
     // Show form to create a new purchase order
     public function create()
     {
-        $categoryId = auth()->user()->category_id;
-        $suppliers = Supplier::when($categoryId != 1, function ($query) use ($categoryId) {
-            $query->where('category_id', $categoryId);
+        $user = auth()->user();
+
+        $suppliers = Supplier::when(! $user->seesAllCategories(), function ($query) use ($user) {
+            $query->where('category_id', $user->category_id);
         })->get();
 
-        $categories = Category::when($categoryId != 1, function ($query) use ($categoryId) {
-            $query->where('id', $categoryId);
+        $categories = Category::when(! $user->seesAllCategories(), function ($query) use ($user) {
+            $query->where('id', $user->category_id);
         })->get();
 
         return Inertia('procurement/PurchaseOrder/Create', compact('suppliers', 'categories'));
@@ -56,13 +59,14 @@ class PurchaseOrderController extends Controller
     // Edit purchase order
     public function edit(PurchaseOrder $purchaseOrder)
     {
-        $categoryId = auth()->user()->category_id;
-        $suppliers = Supplier::when($categoryId != 1, function ($query) use ($categoryId) {
-            $query->where('category_id', $categoryId);
+        $user = auth()->user();
+
+        $suppliers = Supplier::when(! $user->seesAllCategories(), function ($query) use ($user) {
+            $query->where('category_id', $user->category_id);
         })->get();
 
-        $categories = Category::when($categoryId != 1, function ($query) use ($categoryId) {
-            $query->where('id', $categoryId);
+        $categories = Category::when(! $user->seesAllCategories(), function ($query) use ($user) {
+            $query->where('id', $user->category_id);
         })->get();
 
         return Inertia('procurement/PurchaseOrder/Edit', compact('purchaseOrder', 'suppliers', 'categories'));

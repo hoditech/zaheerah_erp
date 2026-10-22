@@ -2,62 +2,64 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InventoryTransaction;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
-use Barryvdh\DomPDF\Facade\Pdf;
-use DB;
+use App\Support\SequentialNumber;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
-use Barryvdh\Debugbar\Facades\Debugbar;
-
-use Str;
-use function Termwind\render;
 
 class PosController extends Controller
 {
+    /**
+     * The receiving details printed on every receipt.
+     */
+    private const STORE_INFO = [
+        'address' => 'No 144 Allasawa Daza Housing Estate Gusau Zamfara State',
+        'contact' => 'contact@zaheerah.com',
+        'phone' => '+234 806 2242 794',
+    ];
+
     public function index()
     {
-        $categoryId = auth()->user()->category_id;
+        $user = auth()->user();
 
         $products = Product::with('category')
-            ->when($categoryId != 1, function ($query) use ($categoryId) {
-                $query->where('category_id', $categoryId);
+            ->when(! $user->seesAllCategories(), function ($query) use ($user) {
+                $query->where('category_id', $user->category_id);
             })
-            ->get(); // Paginate with 10 items per page
+            ->get();
 
-        return Inertia::render("POS/Index", [
+        return Inertia::render('POS/Index', [
             'products' => $products,
         ]);
     }
 
     public function makeSale(Request $request)
     {
+        // Prices are NOT accepted from the client: they are looked up from the
+        // catalogue, so a tampered request cannot under-ring a sale.
         $validated = $request->validate([
-            'items' => 'required|array',
-            'items.*.product_id' => 'required|exists:products,id',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric|min:0',
-            'total_amount' => 'required|numeric|min:0',
         ]);
 
         DB::beginTransaction();
 
         try {
-            // Create the sale record with additional metadata
-            $sale = Sale::create([
-                'total_amount' => number_format($validated['total_amount'], 2, '.', ''),
-                'receipt_number' => 'RC-' . str_pad(Sale::max('id') + 1, 6, '0', STR_PAD_LEFT),
-                'transaction_id' => Str::upper(Str::random(12)),
-            ]);
+            $lines = [];
+            $total = 0.0;
 
-            $saleItems = [];
             foreach ($validated['items'] as $item) {
-                $product = Product::findOrFail($item['product_id']);
+                $product = Product::lockForUpdate()->findOrFail($item['product_id']);
+                $quantity = (int) $item['quantity'];
 
-                if ($product->stock < $item['quantity']) {
-                    // Roll back before returning: bailing out here used to leave
-                    // the transaction open, along with a half-written sale.
+                if ((int) $product->stock < $quantity) {
                     DB::rollBack();
 
                     return response()->json([
@@ -66,27 +68,60 @@ class PosController extends Controller
                     ], 400);
                 }
 
-                // Store product name at time of sale
+                $price = (float) $product->price;
+                $total += $price * $quantity;
+
+                $lines[] = [
+                    'product' => $product,
+                    'quantity' => $quantity,
+                    'price' => $price,
+                ];
+            }
+
+            $sale = Sale::create([
+                'total_amount' => number_format($total, 2, '.', ''),
+                'receipt_number' => SequentialNumber::receipt(),
+                'transaction_id' => Str::upper(Str::random(12)),
+            ]);
+
+            $saleItems = [];
+
+            foreach ($lines as $line) {
+                /** @var Product $product */
+                $product = $line['product'];
+                $quantity = $line['quantity'];
+
                 SaleItem::create([
                     'sale_id' => $sale->id,
                     'product_id' => $product->id,
                     'product_name' => $product->name, // Capture current product name
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
+                    'quantity' => $quantity,
+                    'price' => $line['price'],
                 ]);
 
                 // Deduct first, so the log reports the stock that is actually left.
-                $product->decrement('stock', $item['quantity']);
+                $product->decrement('stock', $quantity);
+
+                // Keep the inventory ledger in step with the stock column. POS
+                // sales used to reduce stock without recording the movement, so
+                // the ledger could never be reconciled against the product row.
+                InventoryTransaction::create([
+                    'product_id' => $product->id,
+                    'quantity' => -$quantity,
+                    'unit_cost' => (float) ($product->unit_cost ?? 0),
+                    'type' => 'deduction',
+                    'notes' => 'POS sale ' . $sale->receipt_number,
+                ]);
 
                 log_activity(
                     'Stock Deduction',
-                    "Deducted {$item['quantity']} units of {$product->name}. Remaining stock: {$product->stock}",
+                    "Deducted {$quantity} units of {$product->name}. Remaining stock: {$product->stock}",
                 );
 
                 $saleItems[] = [
                     'name' => $product->name,
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
+                    'quantity' => $quantity,
+                    'price' => $line['price'],
                 ];
             }
 
@@ -106,17 +141,12 @@ class PosController extends Controller
                     'date' => $sale->created_at->format('M j, Y H:i:s'),
                     'items' => $saleItems,
                     'total_amount' => $sale->total_amount,
-                    'store_info' => [
-                        'address' => 'No 144 Allasawa Daza Housing Estate Gusau Zamfara State',
-                        'contact' => 'contact@zaheerah.com',
-                        'phone' => '+234 806 2242 794'
-                    ]
-                ]
+                    'store_info' => self::STORE_INFO,
+                ],
             ], 200);
-
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
-            \Log::error('Sale Error: ' . $e->getMessage());
+            Log::error('Sale Error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
@@ -127,38 +157,47 @@ class PosController extends Controller
 
     public function generateReceipt(Request $request)
     {
-        \Log::info('Request Data:', $request->all());
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.name' => 'required|string|max:255',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.price' => 'required|numeric|min:0',
+            'total_amount' => 'nullable|numeric|min:0',
+            'receipt_number' => 'nullable|string|max:255',
+            'payment_method' => 'nullable|string|max:50',
+        ]);
 
-        $receiptData = [
-            'items' => $request->items,
-            'total' => $request->total_amount,
-        ];
+        $items = $validated['items'];
+        $total = (float) ($validated['total_amount']
+            ?? collect($items)->sum(fn ($item) => (float) $item['price'] * (int) $item['quantity']));
 
         try {
-            // Generate the receipt HTML content instead of PDF
-            $receiptHtml = view('receipt', $receiptData)->render();
+            // Render the real data. This view used to be a hard-coded demo
+            // invoice that ignored the request entirely.
+            $receiptHtml = view('receipt', [
+                'items' => $items,
+                'total' => $total,
+                'receiptNumber' => $validated['receipt_number'] ?? null,
+                'paymentMethod' => $validated['payment_method'] ?? 'cash',
+                'date' => now(),
+                'store' => self::STORE_INFO,
+            ])->render();
 
-            // Return the HTML content as the response
             return response($receiptHtml, 200)->header('Content-Type', 'text/html');
-        } catch (\Exception $e) {
-            \Log::error($e);
+        } catch (\Throwable $e) {
+            Log::error('Receipt generation failed: ' . $e->getMessage());
+
             return response()->json([
                 'message' => 'Error generating receipt',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
-
     /**
      * Get the stock of a specific product.
-     *
-     * @param  Product  $product
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getStock(Product $product)
     {
-        // Return the stock information
         return response()->json([
             'product_id' => $product->id,
             'stock' => $product->stock,
@@ -180,7 +219,7 @@ class PosController extends Controller
                     'product_id' => $item->product_id,
                     'name' => $item->product_name ?? 'Product Name Not Available',
                     'quantity' => $item->quantity,
-                    'price' => (float) $item->price
+                    'price' => (float) $item->price,
                 ];
             });
 
@@ -191,22 +230,18 @@ class PosController extends Controller
                     'receipt_number' => $sale->receipt_number,
                     'transaction_id' => $sale->transaction_id,
                     'date' => $sale->created_at->format('M j, Y H:i:s'),
-                    'payment_method' => $sale->payment_method ?? 'cash',
+                    'payment_method' => 'cash',
                     'items' => $receiptItems,
                     'total_amount' => (float) $sale->total_amount,
-                    'store_info' => [
-                        'address' => 'No 144 Allasawa Daza Housing Estate Gusau Zamfara State',
-                        'contact' => 'contact@zaheerah.com',
-                        'phone' => '+234 806 2242 794'
-                    ]
-                ]
+                    'store_info' => self::STORE_INFO,
+                ],
             ], 200);
+        } catch (\Throwable $e) {
+            Log::error('Receipt lookup failed: ' . $e->getMessage());
 
-        } catch (\Exception $e) {
-            \Log::error("Receipt lookup failed: " . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Receipt not found'
+                'message' => 'Receipt not found',
             ], 404);
         }
     }

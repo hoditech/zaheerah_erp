@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -16,12 +17,9 @@ class EmployeeController extends Controller
      */
     public function index()
     {
-        $userCategoryId = auth()->user()->category_id;
-
         $employees = User::with(['category', 'roles'])
             ->whereNotIn('employee_id', ['ZVL/2025/HR/SS/001', 'ZVL/2025/HR/SS/002'])
             ->get();
-
 
         return Inertia::render('HR/Index', [
             'employees' => $employees,
@@ -35,7 +33,7 @@ class EmployeeController extends Controller
     {
         $categories = Category::all();
         $roles = Role::all();
-        $permissions = Permission::all(); // Fetch all permissions
+        $permissions = Permission::all();
 
         return Inertia::render('HR/Create', [
             'categories' => $categories,
@@ -49,40 +47,38 @@ class EmployeeController extends Controller
      */
     public function store(Request $request)
     {
-        try {
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
-                'phone' => 'nullable|string|max:15',
-                'role_id' => 'required|exists:roles,id',
-                'can_login' => 'required|boolean',
-                'category_id' => 'required|exists:categories,id',
-                'password' => 'required|string|min:8|confirmed',
-                'selected_permissions' => 'array',
-                'selected_permissions.*' => 'exists:permissions,id',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            //dd($e->errors()); // Display validation errors
-        }
-
-        $validated['password'] = bcrypt($validated['password']);
-
-        $role = Role::find($validated['role_id']);
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'],
-            'category_id' => $validated['category_id'],
-            'password' => $validated['password'],
-            'can_login' => $validated['can_login'],
-            'employee_id' => User::generateUserCode(),
+        // Validation errors must surface as a normal form error. The old code
+        // swallowed the ValidationException in an empty catch and then crashed
+        // with "Undefined variable $validated" (HTTP 500).
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
+            'phone' => 'nullable|string|max:15',
+            'role_id' => 'required|exists:roles,id',
+            'can_login' => 'required|boolean',
+            'category_id' => 'required|exists:categories,id',
+            'password' => 'required|string|min:8|confirmed',
+            'selected_permissions' => 'array',
+            'selected_permissions.*' => 'exists:permissions,id',
         ]);
 
-        $user->assignRole($role);
-        $user->syncPermissions($validated['selected_permissions'] ?? []);
+        $user = DB::transaction(function () use ($validated) {
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+                'category_id' => $validated['category_id'],
+                'password' => bcrypt($validated['password']),
+                'can_login' => $validated['can_login'],
+                'employee_id' => User::generateUserCode(),
+            ]);
 
-        // Log the activity
+            $user->assignRole(Role::findById($validated['role_id']));
+            $user->syncPermissions($validated['selected_permissions'] ?? []);
+
+            return $user;
+        });
+
         log_activity('Create Employee', 'Created employee: ' . $user->name);
 
         return redirect()->route('employees.index')
@@ -98,7 +94,6 @@ class EmployeeController extends Controller
         $roles = Role::all();
         $permissions = Permission::all();
 
-        // Fetch the employee's current role and permissions
         $employeeRole = $employee->roles->pluck('id')->first();
         $employeePermissions = $employee->getAllPermissions()->pluck('id');
 
@@ -113,51 +108,52 @@ class EmployeeController extends Controller
     }
 
     /**
+     * The employee detail page is the edit form.
+     */
+    public function show(User $employee)
+    {
+        return redirect()->route('employees.edit', $employee);
+    }
+
+    /**
      * Update the specified employee in storage.
      */
     public function update(Request $request, User $employee)
     {
-        try {
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'phone' => 'nullable|string|max:15',
-                'can_login' => 'required|boolean',
-                'category_id' => 'required|exists:categories,id',
-                'password' => 'nullable|string|min:8|confirmed', // Password is optional
-                'role_id' => 'required|exists:roles,id',
-                'selected_permissions' => 'array',
-                'selected_permissions.*' => 'exists:permissions,id',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            dd($e->errors()); // Display validation errors
-        }
+        // Errors must redirect back with messages, never dd() the request.
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:15',
+            'can_login' => 'required|boolean',
+            'category_id' => 'required|exists:categories,id',
+            'password' => 'nullable|string|min:8|confirmed', // Password is optional
+            'role_id' => 'required|exists:roles,id',
+            'selected_permissions' => 'array',
+            'selected_permissions.*' => 'exists:permissions,id',
+        ]);
 
-        // Update password only if provided
-        if (!empty($validated['password'])) {
-            $validated['password'] = bcrypt($validated['password']);
-        } else {
-            unset($validated['password']); // Avoid overwriting the password
-        }
-
-        \DB::transaction(function () use ($employee, $validated) {
-            // Update the employee
-            $employee->update([
+        DB::transaction(function () use ($employee, $validated) {
+            $attributes = [
                 'name' => $validated['name'],
-                'phone' => $validated['phone'],
+                'phone' => $validated['phone'] ?? null,
                 'can_login' => $validated['can_login'],
                 'category_id' => $validated['category_id'],
-            ]);
+            ];
 
-            // Sync the role
-            $employee->syncRoles([$validated['role_id']]);
+            // Update password only if provided
+            if (! empty($validated['password'])) {
+                $attributes['password'] = bcrypt($validated['password']);
+            }
 
-            // Sync permissions
+            $employee->update($attributes);
+
+            $employee->syncRoles(Role::findById($validated['role_id']));
+
             if (isset($validated['selected_permissions'])) {
                 $employee->syncPermissions($validated['selected_permissions']);
             }
         });
 
-        // Log the activity
         log_activity('Update Employee', 'Updated employee: ' . $employee->name);
 
         return redirect()->route('employees.index')
@@ -166,13 +162,25 @@ class EmployeeController extends Controller
 
     /**
      * Remove the specified employee from storage.
+     *
+     * Employees are soft-deleted: a hard delete cascaded into their payroll and
+     * activity-log history, silently rewriting financial history. Deactivating
+     * "can login" remains the way to revoke access immediately.
      */
     public function destroy(User $employee)
     {
-        // Log the activity before deleting
-        log_activity('Delete Employee', 'Deleted employee: ' . $employee->name);
+        if ($employee->is(auth()->user())) {
+            return back()->withErrors(['error' => 'You cannot delete your own account.']);
+        }
 
+        if ($employee->hasRole('Super Admin') && User::role('Super Admin')->count() <= 1) {
+            return back()->withErrors(['error' => 'The last Super Admin cannot be deleted.']);
+        }
+
+        $employeeName = $employee->name;
         $employee->delete();
+
+        log_activity('Delete Employee', 'Deleted employee: ' . $employeeName);
 
         return redirect()->route('employees.index')->with('success', 'Employee deleted successfully.');
     }

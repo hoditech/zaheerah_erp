@@ -34,6 +34,10 @@ class RolesSeeder extends Seeder
             'view_products',
             'manage_inventory',
 
+            // Bloom page pricing (managed in the ERP, mirrored to the frontsite)
+            'view_bloom_pricing',
+            'manage_bloom_pricing',
+
             // Supplier and purchase order management
             'manage_suppliers',
             'create_purchase_orders',
@@ -97,7 +101,9 @@ class RolesSeeder extends Seeder
             'view_productions',
             'edit_products',
             'manage_suppliers',
-            'update_productions'
+            'update_productions',
+            'view_bloom_pricing',
+            'manage_bloom_pricing',
         ]);
 
         $finance->syncPermissions([
@@ -121,14 +127,22 @@ class RolesSeeder extends Seeder
             }
         }
 
-        // Optionally assign Super Admin to a default user (e.g., User ID 1)
-        $superAdminUser = User::find(1);
-        if ($superAdminUser) {
-            $superAdminUser->assignRole($superAdmin);
-        }
-        $superAdminUser2 = User::find(2);
-        if ($superAdminUser2) {
-            $superAdminUser2->assignRole($superAdmin);
+        // Give the accounts created by CategorySeeder their real roles.
+        // Resolving by email avoids "whoever happens to have id 1 becomes
+        // Super Admin" and fixes admin/manager/employee@gmail.com, which were
+        // left with no role (and therefore a 403 on every permission-gated page).
+        $staffRoles = [
+            'fattyqadir@yahoo.com' => 'Super Admin',
+            'huduyahaya001@gmail.com' => 'Super Admin',
+            'admin@gmail.com' => 'Admin',
+            'manager@gmail.com' => 'Manager',
+            'employee@gmail.com' => 'Employee',
+        ];
+
+        foreach ($staffRoles as $email => $roleName) {
+            if ($staffUser = User::where('email', $email)->first()) {
+                $staffUser->assignRole($roleName);
+            }
         }
 
         echo "Roles and permissions seeded successfully.";

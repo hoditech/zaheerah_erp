@@ -3,112 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium Receipt</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Receipt {{ $receiptNumber ?? '' }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+            background: #f3f4f6;
+            margin: 0;
+            padding: 24px;
+            color: #111827;
+        }
+        .receipt {
+            max-width: 560px;
+            margin: 0 auto;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(90deg, #059669, #0891b2);
+            color: #fff;
+            padding: 24px;
+            text-align: center;
+        }
+        .header h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .08em; }
+        .header p { margin: 2px 0; font-size: 12px; opacity: .9; }
+        .body { padding: 24px; }
+        .meta { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 16px; }
+        .meta span { color: #6b7280; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; color: #6b7280; font-weight: 500; padding-bottom: 8px; }
+        th.right, td.right { text-align: right; }
+        td { padding: 8px 0; border-top: 1px solid #f3f4f6; }
+        .total { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 2px solid #e5e7eb; font-size: 18px; font-weight: 700; color: #059669; }
+        .footer { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 16px; text-align: center; font-size: 11px; color: #6b7280; }
+    </style>
 </head>
-<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
-    <div class="w-full max-w-lg bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transform transition-all hover:shadow-xl">
-        <!-- Header Section -->
-        <div class="bg-gradient-to-r from-emerald-600 to-cyan-500 p-8 text-center relative">
-            <div class="absolute top-4 right-4 text-white/20">
-                <i class="fas fa-receipt text-4xl"></i>
-            </div>
-            <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">INVOICE</h1>
-            <div class="space-y-1 text-cyan-100">
-                <p class="text-sm font-light">123 Luxury Avenue • Paris, France</p>
-                <p class="text-sm font-light">contact@premiumreceipt.com • +33 1 2345 6789</p>
-            </div>
+<body>
+    <div class="receipt">
+        <div class="header">
+            <h1>ZAHEERAH VENTURES</h1>
+            <p>{{ $store['address'] ?? '' }}</p>
+            <p>{{ $store['contact'] ?? '' }} &middot; {{ $store['phone'] ?? '' }}</p>
         </div>
 
-        <!-- Body Content -->
-        <div class="p-8 space-y-6">
-            <!-- Metadata Grid -->
-            <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                    <p class="text-gray-500 font-medium">Date Issued</p>
-                    <p class="text-gray-700">{{ now()->format('M j, Y') }}</p>
-                </div>
-                <div>
-                    <p class="text-gray-500 font-medium">Receipt #</p>
-                    <p class="text-gray-700">PR-{{ str_pad(12345, 6, '0', STR_PAD_LEFT) }}</p>
+        <div class="body">
+            <div class="meta">
+                <div><span>Date</span><br>{{ ($date ?? now())->format('M j, Y H:i') }}</div>
+                <div style="text-align:right">
+                    <span>Receipt #</span><br>{{ $receiptNumber ?? 'N/A' }}
                 </div>
             </div>
 
-            <!-- Client & Payment Info -->
-            <div class="flex justify-between items-start border-b pb-4 border-gray-100">
-                <div>
-                    <p class="text-gray-500 font-medium mb-1">Bill To</p>
-                    <p class="text-gray-700">Client Name</p>
-                    <p class="text-gray-500 text-sm">client@email.com</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-gray-500 font-medium mb-1">Payment Method</p>
-                    <div class="flex items-center gap-2 justify-end">
-                        <i class="fab fa-cc-visa text-2xl text-blue-900"></i>
-                        <span class="text-gray-700">•••• 4242</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Items Table -->
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b border-gray-100">
-                            <th class="text-left pb-3 text-gray-500 font-medium">Description</th>
-                            <th class="text-right pb-3 text-gray-500 font-medium">Amount</th>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th class="right">Qty</th>
+                        <th class="right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($items as $item)
+                        <tr>
+                            <td>{{ $item['name'] }}</td>
+                            <td class="right">{{ $item['quantity'] }}</td>
+                            <td class="right">
+                                &#8358;{{ number_format((float) $item['price'] * (int) $item['quantity'], 2) }}
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="border-b border-gray-100">
-                            <td class="py-3 text-gray-700">Premium Subscription</td>
-                            <td class="py-3 text-right text-gray-700">€49.00</td>
+                    @empty
+                        <tr>
+                            <td colspan="3">No items</td>
                         </tr>
-                        <tr class="border-b border-gray-100">
-                            <td class="py-3 text-gray-700">Technical Support</td>
-                            <td class="py-3 text-right text-gray-700">€29.00</td>
-                        </tr>
-                    </tbody>
-                </table>
+                    @endforelse
+                </tbody>
+            </table>
+
+            <div class="total">
+                <span>Total</span>
+                <span>&#8358;{{ number_format((float) $total, 2) }}</span>
             </div>
 
-            <!-- Totals -->
-            <div class="space-y-2 text-right">
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-500">Subtotal:</span>
-                    <span class="text-gray-700">€78.00</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-500">Tax (20%):</span>
-                    <span class="text-gray-700">€15.60</span>
-                </div>
-                <div class="flex justify-between items-center pt-2">
-                    <span class="font-bold text-lg text-emerald-600">Total Due:</span>
-                    <span class="font-bold text-lg text-emerald-600">€93.60</span>
-                </div>
-            </div>
-
-            <!-- Payment Status -->
-            <div class="bg-emerald-50 p-4 rounded-lg flex items-center gap-3">
-                <i class="fas fa-check-circle text-emerald-600"></i>
-                <div>
-                    <p class="text-emerald-600 font-medium">Payment Complete</p>
-                    <p class="text-xs text-emerald-600">Transaction ID: {{ substr(md5(uniqid()), 0, 12) }}</p>
-                </div>
-            </div>
+            <p style="font-size:12px;color:#6b7280;margin-top:12px;">
+                Payment method: {{ ucfirst(str_replace('_', ' ', $paymentMethod ?? 'cash')) }}
+            </p>
         </div>
 
-        <!-- Footer -->
-        <div class="bg-gray-50 p-6 text-center border-t border-gray-100">
-            <div class="flex justify-center gap-4 mb-3 text-gray-400">
-                <i class="fab fa-twitter"></i>
-                <i class="fab fa-facebook"></i>
-                <i class="fab fa-instagram"></i>
-            </div>
-            <p class="text-xs text-gray-400">Thank you for choosing Premium Receipt</p>
-            <p class="text-xs text-gray-400 mt-1">This is an official digital receipt • Valid without signature</p>
+        <div class="footer">
+            Thank you for your business.
         </div>
     </div>
 </body>

@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Support\SequentialNumber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,11 +48,7 @@ class OrderController extends Controller
 
         // Replay of an order we have already booked.
         if ($existing = Sale::where('external_ref', $validated['external_ref'])->first()) {
-            return response()->json([
-                'message' => 'Order already recorded.',
-                'duplicate' => true,
-                'data' => $this->salePayload($existing),
-            ], 200);
+            return $this->duplicateResponse($existing);
         }
 
         // The server totals the order itself; never trust a client-side amount.
@@ -66,7 +63,7 @@ class OrderController extends Controller
                     'external_ref' => $validated['external_ref'],
                     'channel' => 'web',
                     'total_amount' => number_format($total, 2, '.', ''),
-                    'receipt_number' => 'RC-' . str_pad((string) (Sale::max('id') + 1), 6, '0', STR_PAD_LEFT),
+                    'receipt_number' => SequentialNumber::receipt(),
                     'transaction_id' => 'WEB-' . Str::upper(Str::random(10)),
                     'customer_name' => $validated['customer']['name'] ?? null,
                     'customer_email' => $validated['customer']['email'] ?? null,
@@ -93,6 +90,13 @@ class OrderController extends Controller
                 return $sale;
             });
         } catch (Throwable $e) {
+            // A concurrent retry of the same order can pass the check above and
+            // then lose the unique(external_ref) race. That is not a failure:
+            // return the sale that won instead of a 500.
+            if ($existing = Sale::where('external_ref', $validated['external_ref'])->first()) {
+                return $this->duplicateResponse($existing);
+            }
+
             Log::error('Storefront order intake failed', [
                 'external_ref' => $validated['external_ref'],
                 'error' => $e->getMessage(),
@@ -134,7 +138,7 @@ class OrderController extends Controller
         }
 
         $product = Product::create([
-            'name' => $item['name'],
+            'name' => trim($item['name']),
             'price' => $item['price'],
             'stock' => 0,
             // Resolve the fallback category by name rather than a magic id, which
@@ -159,6 +163,10 @@ class OrderController extends Controller
      */
     private function applyStockMovement(Product $product, int $quantity, array &$warnings): void
     {
+        // Re-read the row with a write lock so two simultaneous web orders
+        // cannot both see the same stock and oversell it.
+        $product = Product::lockForUpdate()->find($product->id) ?? $product;
+
         if ($product->stock >= $quantity) {
             $product->decrement('stock', $quantity);
 
@@ -177,6 +185,15 @@ class OrderController extends Controller
             $quantity,
             $available
         );
+    }
+
+    private function duplicateResponse(Sale $sale): JsonResponse
+    {
+        return response()->json([
+            'message' => 'Order already recorded.',
+            'duplicate' => true,
+            'data' => $this->salePayload($sale),
+        ], 200);
     }
 
     private function salePayload(Sale $sale): array

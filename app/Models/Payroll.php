@@ -41,10 +41,11 @@ class Payroll extends Model
         'net_salary_only_tax',
     ];
 
-    // Relationship with User (Employee)
+    // Relationship with User (Employee). Employees are soft-deleted so their
+    // payroll history survives; withTrashed keeps the name/serial usable.
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     // Automatically calculate gross_salary

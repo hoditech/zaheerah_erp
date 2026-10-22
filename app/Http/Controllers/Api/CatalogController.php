@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\InventoryTransaction;
 use App\Models\Product;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -28,6 +29,7 @@ class CatalogController extends Controller
     private const IMAGE_TIMEOUT = 15;
 
     private const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
     /**
      * GET /api/v1/catalog/products
      *
@@ -37,8 +39,16 @@ class CatalogController extends Controller
     {
         $query = Product::with('category')->orderBy('id');
 
-        if ($since = $request->query('updated_since')) {
-            $query->where('updated_at', '>=', $since);
+        // Accept the storefront's ISO timestamp but never 422 an incremental
+        // sync on a malformed value: fall back to a full catalogue instead.
+        if ($sinceParam = $request->query('updated_since')) {
+            try {
+                // A raw "+" in a query string arrives as a space.
+                $since = Carbon::parse(str_replace(' ', '+', (string) $sinceParam));
+                $query->where('updated_at', '>=', $since);
+            } catch (Throwable) {
+                // Ignore the filter.
+            }
         }
 
         $products = $query->get()->map(fn (Product $product) => [
@@ -90,8 +100,17 @@ class CatalogController extends Controller
             )->id;
         }
 
-        $product = Product::firstOrNew(['name' => $validated['name']]);
+        $name = trim($validated['name']);
+
+        // Match case-insensitively: a re-import of "Palm Oil" must update the
+        // existing row, not create a second "palm oil" one.
+        $product = Product::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first()
+            ?? new Product();
         $created = ! $product->exists;
+
+        if ($created) {
+            $product->name = $name;
+        }
 
         $product->price = $validated['price'];
 
@@ -172,6 +191,12 @@ class CatalogController extends Controller
             return [ltrim((string) parse_url($url, PHP_URL_PATH), '/'), null];
         }
 
+        // Never let the shared secret turn this endpoint into an SSRF probe of
+        // the internal network (cloud metadata, localhost services, ...).
+        if (! $this->isSafeRemoteUrl($url)) {
+            return [$url, "The image URL {$url} was refused (only public http/https hosts are allowed). The link was kept instead."];
+        }
+
         try {
             $response = Http::timeout(self::IMAGE_TIMEOUT)->get($url);
         } catch (Throwable $e) {
@@ -206,6 +231,41 @@ class CatalogController extends Controller
         $ownHost = parse_url((string) config('app.url'), PHP_URL_HOST);
 
         return $ownHost !== null && parse_url($url, PHP_URL_HOST) === $ownHost;
+    }
+
+    /**
+     * Reject anything that is not a plain public http(s) URL.
+     */
+    private function isSafeRemoteUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+
+        if (! is_array($parts)) {
+            return false;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower(trim((string) ($parts['host'] ?? '')));
+
+        if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
+            return false;
+        }
+
+        if ($host === 'localhost' || str_ends_with($host, '.local') || str_ends_with($host, '.internal')) {
+            return false;
+        }
+
+        // Literal IPs must be public; this blocks loopback, RFC1918 and cloud
+        // metadata addresses such as 169.254.169.254.
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return filter_var(
+                $host,
+                FILTER_VALIDATE_IP,
+                FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+            ) !== false;
+        }
+
+        return true;
     }
 
     private function imageFilename(string $url, string $contentType): string
